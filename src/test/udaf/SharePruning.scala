@@ -1,0 +1,5 @@
+package udaf
+
+object SharePruning {
+
+}
