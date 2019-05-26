@@ -16,6 +16,29 @@ object udafApp {
 
   import sqlContext.implicits._
 
+  /*-----------------------------------------
+    実験で使用するパラメータの設定
+      * sub_num : 部分データの総数
+      * z_p     : 95％信頼区間のZ_p
+      * k       : 探索する上位の件数 (Top-k)
+      * per     : データ分割数
+      * rates   : データ分割の粒度(分割率)
+   -----------------------------------------*/
+  val sub_num: Int = 316 //TODO: 総部分データ数
+  var k: Int = 10 //TODO: 探索件数の設定
+  var datasize: Int = 1 
+  var pertition: Int = 2 
+  val rates: Array[Double] = Array.fill(pertition)(1.0 / pertition)
+  val z_p: Double = 1.96 * 1.96
+
+  /* -----------------------------------------
+    TODO: Set Query's Parameter 
+   -----------------------------------------*/
+  val s: String = "OriginCityName"
+  val x: String = "Quarter"
+  val y: String = "DepDelay"
+  val agg_func: String = "AVG"  
+
   /*------------------------------
     パラメータの設定・初期化
    ------------------------------*/
@@ -29,22 +52,6 @@ object udafApp {
   var pruning_rates: List[Double] = List.empty[Double]
   var pruning_num: List[Int] = List.empty[Int]
 
-  /*-----------------------------------------
-    実験で使用するパラメータの設定
-      * sub_num : 部分データの総数
-      * z_p     : 95％信頼区間のZ_p
-      * k       : 探索する上位の件数 (Top-k)
-      * per     : データ分割数
-      * rates   : データ分割の粒度(分割率)
-   -----------------------------------------*/
-  val sub_num: Int = 316
-  val z_p: Double = 1.96 * 1.96
-  var k: Int = 10
-  var datasize: Int = 1
-  var decrease_size: Int = 100
-  var pertition: Int = 2
-  val rates: Array[Double] = Array.fill(pertition)(1.0 / pertition)
-
   /*------------------------------
     時間計測用のパラメータの初期化
    ------------------------------*/
@@ -54,6 +61,7 @@ object udafApp {
   var compute_time: Int = 0
   var rap_time: List[Any] = List[Any]()
   var all_time: Int = 0
+  val wait_time: Int = 30000
   var start: Int = System.currentTimeMillis().toInt
   val k_list: List[Int] = List[Int](1, 5, 10, 15, 20, 25, 30)
   val size_list: List[Int] = List[Int](2, 4, 6, 8, 10)
@@ -105,7 +113,7 @@ object udafApp {
       * data = 3 : Border Crossing Data
     --------------------------------------------------------------------------------- */
     /*-------------
-      実験条件の設定
+      TODO: 実験条件の設定 
     --------------*/
     val app: Int = 2
     val data: Int = 1
@@ -115,12 +123,10 @@ object udafApp {
     val DF_block: Array[DataFrame] = ReadData.read_split_data(sqlContext, data_flg = data, partition = pertition)
     val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext)
 
-    for (roop_iterator <- size_list) { // データサイズ or 探索件数のパラメータ変更
+    for (roop_iterator <- size_list) { //TODO: データサイズ or 探索件数のパラメータ変更
       k = roop_iterator
-      for (_ <- 1 to 3) { // 同じパラメータでの繰り返し回数
-        // 実験用パラメータの初期化
-        initparameter()
-
+      for (_ <- 1 to 3) { // TODO: 同じパラメータでの繰り返し回数の設定
+        initparameter() // 実験用パラメータの初期化
         /*-------------
           手法選択
         --------------*/
@@ -135,11 +141,10 @@ object udafApp {
         res_output(app, data, method, output_ver) // 結果の出力
 
         val wait_start = System.currentTimeMillis().toInt
-        while (System.currentTimeMillis().toInt - wait_start < 30000) {}
+        while (System.currentTimeMillis().toInt - wait_start < wait_time) {} 
       }
     }
-
-    sc.stop //Warning 対策
+    sc.stop
   }
 
   private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
@@ -176,14 +181,6 @@ object udafApp {
       case _ => ???
     }
   }
-
-  /* ---------------------------------------------------------------------------------
-    Set Query's Parameter
-   --------------------------------------------------------------------------------- */
-  val s: String = "OriginCityName"
-  val x: String = "Quarter"
-  val y: String = "DepDelay"
-  val agg_func: String = "AVG"
 
   private def execute_udaf(table: String): DataFrame = {
     sqlContext.sql(
@@ -233,7 +230,7 @@ object udafApp {
         block_df.createOrReplaceTempView("SharePruning")
       }
       else {
-        block_df.filter(!$"OriginCityName".isin(pruning_subset_key: _*)).createOrReplaceTempView("SharePruning")
+        block_df.filter(!$"OriginCityName".isin(pruning_subset_key: _*)).createOrReplaceTempView("SharePruning") //TODO: 部分データの属性名の指定
       }
       todf_time += System.currentTimeMillis().toInt - start_todf
 
@@ -359,7 +356,7 @@ object udafApp {
       subset_array.foreach { s_key =>
         if (!pruning_subset_key.contains(s_key) & pruning_subset_key.length != sub_num - k) {
           val start_todf: Int = System.currentTimeMillis().toInt
-          block.filter($"OriginCityName" === s_key).createOrReplaceTempView("Pruning")
+          block.filter($"OriginCityName" === s_key).createOrReplaceTempView("Pruning") //TODO: 部分データの属性の指定
           todf_time += System.currentTimeMillis().toInt - start_todf
 
           val start_udaf = System.currentTimeMillis().toInt
