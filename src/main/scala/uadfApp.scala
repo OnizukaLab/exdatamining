@@ -1,12 +1,12 @@
 package udafApp
 
-import org.apache.spark.{SparkConf, SparkContext, SparkEnv}
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SQLContext}
+import org.apache.spark.sql.{DataFrame, SQLContext}
+import org.apache.spark.{SparkConf, SparkContext}
 
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
-object udaf {
+object udafApp {
   /*------------------------------
     SparkContext インスタンスの生成
    ------------------------------*/
