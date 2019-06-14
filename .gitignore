@@ -9,3 +9,6 @@ metastore_db
 
 */*/*.csv
 */*/*/*.csv
+
+src/*/*/*.py~
+src/*/*/*/*.html
