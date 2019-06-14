@@ -20,13 +20,13 @@ object Evaluate {
   var gof_ams_filename: String = ""
 
   private def init_foreval_params(data: Int, method: String, datasize: Int): Unit = {
-    data_name = "Flights2"
-    output_file = "results/%s/deim2019.csv" format data_name
-    file_share = "results/%s/deim2019_share.csv" format data_name
-    file_pruning = "results/%s/deim2019_pruning.csv" format data_name
-    file_baseline = "results/%s/deim2019_baseline.csv" format data_name
-    lof_ans_filename = "results/%s/lof_answer.csv" format data_name
-    gof_ams_filename = "results/%s/gof_answer.csv" format data_name
+    data_name = "Flights"
+    output_file = "./results/%s/flight.csv" format data_name
+    file_share = "./results/%s/flight_share.csv" format data_name
+    file_pruning = "./results/%s/flight_pruning.csv" format data_name
+    file_baseline = "./results/%s/flight_baseline.csv" format data_name
+    lof_ans_filename = "./results/%s/lof_answer.csv" format data_name
+    gof_ams_filename = "./results/%s/gof_answer.csv" format data_name
   }
 
   /*--------------------------------
@@ -163,24 +163,26 @@ object Evaluate {
   def currect_results(app: Int, results: List[(String, (Double, Double))]): Unit = {
     init_foreval_params(1, "Share", 1)
     /*
-      書き込み処理準備
+      正解結果の書き込み
      */
-    val ans_filename = app match {
-      case 1 => gof_ams_filename
-      case 2 => lof_ans_filename
-      case _ => ???
+    val fileOutputStream_gof = new FileOutputStream(gof_ams_filename, true)
+    val writer_gof = new OutputStreamWriter(fileOutputStream_gof, "utf-8")
+    var ranking_gof = 1
+    results.foreach { f =>
+      writer_gof.write("%s,%s,%s\n" format(ranking_gof, f._1.replaceAll(" ", ""), f._2._1))
+      ranking_gof += 1
     }
-    println("ans_filename = %s" format ans_filename)
-    val fileOutputStream = new FileOutputStream(ans_filename, true)
-    val writer = new OutputStreamWriter(fileOutputStream, "utf-8")
+    writer_gof.close
     /*
       正解結果の書き込み
      */
-    var ranking = 1
+    val fileOutputStream_lof = new FileOutputStream(lof_ans_filename, true)
+    val writer_lof = new OutputStreamWriter(fileOutputStream_lof, "utf-8")
+    var ranking_lof = 1
     results.foreach { f =>
-      writer.write("%s,%s,%s\n" format(ranking, f._1.replaceAll(" ", ""), f._2._1))
-      ranking += 1
+      writer_lof.write("%s,%s,%s\n" format(ranking_lof, f._1.replaceAll(" ", ""), f._2._1))
+      ranking_lof += 1
     }
-    writer.close
+    writer_lof.close
   }
 }

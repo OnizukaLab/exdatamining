@@ -109,13 +109,16 @@ object udafApp {
     --------------*/
     val app: Int = 2
     val data: Int = 1
-    val method: String = "Baseline"
+    val method: String = ("Baseline", "Share", "SharePruning")._1
     val output_ver: String = ("Experiment", "Correct")._1
 
     val DF_block: Array[DataFrame] = ReadData.read_split_data(sqlContext, data_flg = data, partition = pertition)
     val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext)
 
-    for (roop_iterator <- size_list) { // データサイズ or 探索件数のパラメータ変更
+    ALL_DF.cache()
+    DF_block.foreach(b => b.cache())
+
+    for (roop_iterator <- k_list) { // データサイズ(size_list) or 探索件数のパラメータ変更(k_list)
       k = roop_iterator
       for (_ <- 1 to 3) { // 同じパラメータでの繰り返し回数
         // 実験用パラメータの初期化
@@ -143,6 +146,7 @@ object udafApp {
   }
 
   private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
+    println(output_ver)
     output_ver match {
       case "Experiment" =>
         for (app <- 1 to 2) {

@@ -7,5 +7,5 @@
 target
 metastore_db
 
-src/*/*.csv
-src/*/*/*.csv
+*/*/*.csv
+*/*/*/*.csv
