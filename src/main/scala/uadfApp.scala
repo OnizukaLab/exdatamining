@@ -123,14 +123,11 @@ object udafApp {
     val DF_block: Array[DataFrame] = ReadData.read_split_data(sqlContext, data_flg = data, partition = pertition)
     val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext)
 
-<<<<<<< HEAD
     ALL_DF.cache()
     DF_block.foreach(b => b.cache())
 
     for (roop_iterator <- k_list) { // データサイズ(size_list) or 探索件数のパラメータ変更(k_list)
-=======
-    for (roop_iterator <- size_list) { //TODO: データサイズ or 探索件数のパラメータ変更
->>>>>>> origin/master
+
       k = roop_iterator
       for (_ <- 1 to 3) { // TODO: 同じパラメータでの繰り返し回数の設定
         initparameter() // 実験用パラメータの初期化
