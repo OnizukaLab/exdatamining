@@ -181,7 +181,7 @@ object udafApp {
         println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
       case "Correct" =>
-        Evaluate.currect_results(app, result_gof) //TODO : GOFとLOF両方の正解データの出力に対応していない
+        Evaluate.currect_results(app, result_gof) //TODO: GOFとLOF両方の正解データの出力に対応していない
 
       case _ => ???
     }
@@ -243,6 +243,7 @@ object udafApp {
         // step. データブロックをのデータキューブ化
         val start_udaf = System.currentTimeMillis().toInt
         val mp = execute_udaf("SharePruning").first().getMap[String, Map[String, Seq[Double]]](0) //UDAFの実行 + MaP型への変換
+        //val mp = execute_all("Share").toMap
         udaf_time += System.currentTimeMillis().toInt - start_udaf.toInt
 
         // step. DataCubeのマージ
@@ -319,6 +320,8 @@ object udafApp {
     // step. Make Data Cube
     val start_udaf = System.currentTimeMillis().toInt
     part_cube ++= execute_udaf("Share").first().getMap[String, Map[String, Seq[Double]]](0) //UDAFの実行 + MaP型への変換
+    //part_cube ++= execute_all("Share")
+    
     udaf_time += System.currentTimeMillis().toInt - start_udaf.toInt
 
     // Cubeの再構築 & 信頼区間の算出
