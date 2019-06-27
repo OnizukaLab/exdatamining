@@ -105,6 +105,7 @@ object udafApp {
       * app = 2 : LOF(Local Outlier Factor
       * app = 3 : seedb
       * app = 4 : 回帰分析 (Regression Anaysis)
+      * app = 5 : 天文台データ
 
     <データ種類>
       data 変数で制御
@@ -126,6 +127,25 @@ object udafApp {
     ALL_DF.cache()
     DF_block.foreach(b => b.cache())
 
+
+    sqlContext.udf.register("Engine", new ExperimentEngine)
+    ALL_DF.createOrReplaceTempView("test")
+
+
+    var udaf_time: Int = System.currentTimeMillis().toInt
+    //part_cube ++= execute_udaf("test").first().getMap[String, Map[String, Seq[Double]]](0) //UDAFの実行 + MaP型への変換
+    udaf_time = System.currentTimeMillis().toInt - udaf_time
+
+    var sql_time: Int = System.currentTimeMillis().toInt
+    val sample_df = execute_all_subset_query("test")
+    //  .map { r =>r.toSeq.head.toString -> Map(r.toSeq(1) -> Seq(r.toSeq(3).toString.toDouble, r.toSeq(3).toString.toDouble))}.toMap
+    sample_df.show()
+    sql_time = System.currentTimeMillis().toInt - sql_time
+
+    println("udaf time : %s" format udaf_time/1000)
+    println("sql time : %s" format sql_time/1000)
+
+    /*
     for (roop_iterator <- k_list) { // データサイズ(size_list) or 探索件数のパラメータ変更(k_list)
 
       k = roop_iterator
@@ -148,6 +168,7 @@ object udafApp {
         while (System.currentTimeMillis().toInt - wait_start < wait_time) {} 
       }
     }
+    */
     sc.stop
   }
 
@@ -202,6 +223,12 @@ object udafApp {
   private def execute_all(table: String): DataFrame = {
     sqlContext.sql(
       "SELECT %s, count(*), sum(%s)/count(*), variance(%s) FROM %s GROUP BY %s" format(x, y, y, table, x)
+    )
+  }
+
+  private def execute_all_subset_query(table: String): DataFrame = {
+    sqlContext.sql(
+      "SELECT %s, %s, count(*), sum(%s)/count(*), variance(%s) FROM %s GROUP BY %s, %s" format(s, x, y, y, table, s, x)
     )
   }
 
