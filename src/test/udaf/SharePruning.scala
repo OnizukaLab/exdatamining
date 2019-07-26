@@ -1,5 +1,0 @@
-package udaf
-
-object SharePruning {
-
-}

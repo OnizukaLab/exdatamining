@@ -1,5 +1,6 @@
 package udafApp
 
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -26,8 +27,8 @@ object udafApp {
    -----------------------------------------*/
   val sub_num: Int = 316 //TODO: 総部分データ数
   var k: Int = 10 //TODO: 探索件数の設定
-  var datasize: Int = 1 
-  var pertition: Int = 2 
+  var datasize: Int = 1
+  var pertition: Int = 2
   val rates: Array[Double] = Array.fill(pertition)(1.0 / pertition)
   val z_p: Double = 1.96 * 1.96
 
@@ -37,7 +38,7 @@ object udafApp {
   val s: String = "OriginCityName"
   val x: String = "Quarter"
   val y: String = "DepDelay"
-  val agg_func: String = "AVG"  
+  val agg_func: String = "AVG"
 
   /*------------------------------
     パラメータの設定・初期化
@@ -142,8 +143,8 @@ object udafApp {
     sample_df.show()
     sql_time = System.currentTimeMillis().toInt - sql_time
 
-    println("udaf time : %s" format udaf_time/1000)
-    println("sql time : %s" format sql_time/1000)
+    println("udaf time : %s" format udaf_time / 1000)
+    println("sql time : %s" format sql_time / 1000)
 
     /*
     for (roop_iterator <- k_list) { // データサイズ(size_list) or 探索件数のパラメータ変更(k_list)
@@ -170,6 +171,20 @@ object udafApp {
     }
     */
     sc.stop
+  }
+
+  private def summarizeAsMap(df: DataFrame): RDD[(String, Map[String, Long])] = {
+    /*
+      df[col1, col2, col3] ->
+     */
+    // RDD[((String, String), Long)] のデータ構造にreduceする
+    val firstReduce = df.rdd.map(row => row.getString(0) -> row.getString(1) -> row.getLong(2)).reduceByKey(_ + _)
+    // uidをkey, Mapをvalueとするreduce, reduceされたデータ構造 RDD[(String, Map(String, Long))]
+    val mapRdd = firstReduce.map(e => e._1._1 -> Map(e._1._2 -> e._2)).reduceByKey(_ ++ _)
+
+    val hmap = mapRdd.collectAsMap()
+
+    mapRdd
   }
 
   private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
@@ -348,7 +363,7 @@ object udafApp {
     val start_udaf = System.currentTimeMillis().toInt
     part_cube ++= execute_udaf("Share").first().getMap[String, Map[String, Seq[Double]]](0) //UDAFの実行 + MaP型への変換
     //part_cube ++= execute_all("Share")
-    
+
     udaf_time += System.currentTimeMillis().toInt - start_udaf.toInt
 
     // Cubeの再構築 & 信頼区間の算出
