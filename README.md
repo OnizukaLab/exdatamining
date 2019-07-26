@@ -4,8 +4,9 @@
 ## ファイル構成
 - src
     - main
-        - python
-        - scala
+        - python : 
+        - scala : 
+	- sql : pdr1 に関するサンプルの sql コード
     - recources
         - （各種データ名のフォルダ）
         - tmp
