@@ -1,19 +1,12 @@
+# 接続方法
+```
 ssh -i 秘密鍵のパス 153.127.109.50
-
 ssh 172.16.1.175
-
 sudo su postgres
-
 psql -d pdr1
+```
 
-select count(*) from pdr1_wide.forced; -> 84,017,247
-select count(*) from pdr1_wide.meas; -> 84,042,022
-select count(*) from pdr1_wide.photoz_demp; -> 52,658,163
-
-\COPY (select * from skymap limit 5) TO 'skymap.csv' WITH CSV HEADER DELIMITER ',';
-\COPY (select * from pdr1_wide.forced) TO 'forced.csv' WITH CSV HEADER DELIMITER ',';
-\COPY (select * from pdr1_wide.meas) TO 'meas.csv' WITH CSV HEADER DELIMITER ',';
-
+---
 
 # 5/27 打ち合わせ with 高田さん，古澤さん
 明るさが変動
