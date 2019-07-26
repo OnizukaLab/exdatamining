@@ -1,14 +1,18 @@
+# DS_Store
 .DS_Store
 */DS_Store
 
+# scala 関連
 *.class
 *.idea/
 *.log
 target
 metastore_db
 
+# データファイル
 */*/*.csv
 */*/*/*.csv
-
-src/*/*/*.py~
 src/*/*/*/*.html
+
+# python 関連
+src/*/*/*.py~
