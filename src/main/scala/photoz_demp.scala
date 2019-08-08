@@ -49,14 +49,15 @@ object photoz_demp {
             val photoz_risk_median = elms(12).toFloat
             val photoz_risk_best = elms(13).toFloat
             val photoz_std_mean = elms(14).toFloat
-            val photoz_std_mode = elms().toFloat
-            val photoz_std_median = elms().toFloat
-            val photoz_std_best = elms().toFloat
-            val photoz_err68_min = elms().toFloat
-            val photoz_err68_max = elms().toFloat
-            val photoz_err95_min = elms().toFloat
-            val photoz_err95_max = elms().toFloat
-        (
+            val photoz_std_mode = elms(15).toFloat
+            val photoz_std_median = elms(16).toFloat
+            val photoz_std_best = elms(17).toFloat
+            val photoz_err68_min = elms(18).toFloat
+            val photoz_err68_max = elms(19).toFloat
+            val photoz_err95_min = elms(20).toFloat
+            val photoz_err95_max = elms(21).toFloat
+            
+        photozdemp(
             object_id
             ,photoz_mean, photoz_mode, photoz_median, photoz_best, photoz_mc
             ,photoz_conf_mean, photoz_conf_mode, photoz_conf_median, photoz_conf_best
