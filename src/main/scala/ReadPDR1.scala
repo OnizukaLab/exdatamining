@@ -1,5 +1,7 @@
 package udafApp
 
+import org.apache.spark.SparkContext
+
 object ReadPDR1 {
   def forced()={
     sc.textFile("hdfs://user/matsumoto/sample_pdr1_wide.photoz_demp").

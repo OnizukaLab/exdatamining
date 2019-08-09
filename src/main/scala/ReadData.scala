@@ -2,8 +2,8 @@ package udafApp
 
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SQLContext, SaveMode}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, SQLContext}
 
 object ReadData {
   /*---------------------------------------------------------------------------------
