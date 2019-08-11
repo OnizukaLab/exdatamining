@@ -5,7 +5,7 @@ import org.apache.spark.SparkContext
 object ReadPDR1 {
 
   case class force(
-                    object_id: BigInt
+                    object_id: Long
                     , ra: Double
                     , dec: Double
                     , coord: String
@@ -13,7 +13,7 @@ object ReadPDR1 {
                     , tract: Int
                     , patch: Int
                     , patch_s: String
-                    , parent_id: BigInt
+                    , parent_id: Long
                     , deblend_nchild: Int
                     , a_g: Float
                     , a_r: Float
@@ -1086,7 +1086,7 @@ object ReadPDR1 {
         val skymap_id = elms(6).toInt
         val tract = elms(7).toInt
         val patch = elms(8).toInt
-        val patch_s = elms(9).toString
+        val patch_s = elms(9)
         val parent_id = elms(10).toLong
         val deblend_nchild = elms(11).toInt
         val a_g = elms(12).toFloat
@@ -1773,7 +1773,7 @@ object ReadPDR1 {
         val zflux_kron_flags_radius = elms(693).toBoolean
         val zflux_kron_flags_smallradius = elms(694).toBoolean
         val zflux_kron_flags_usedminimumradius = elms(695).toBoolean
-        val zflux_kron_flags_usedpsfradius = elms(696).toString.toBoolean
+        val zflux_kron_flags_usedpsfradius = elms(696).toBoolean
         val zflux_kron_flags_badshape = elms(697).toBoolean
         val zflux_kron_flags_apcorr = elms(698).toBoolean
         val zflux_aperture10 = elms(699).toDouble
@@ -2176,210 +2176,36 @@ object ReadPDR1 {
           , rcmodel_exp_flux_flags, rcmodel_exp_flags_badreference, rcmodel_exp_flags_numericerror, rcmodel_dev_flux_flags, rcmodel_dev_flags_badreference, rcmodel_dev_flags_numericerror, rcmodel_flux_flags
           , rcmodel_flags_region_maxarea, rcmodel_flags_region_maxbadpixelfraction, rcmodel_flags_badreference, rcmodel_flags_nopsf, rcmodel_flags_nowcs, rcmodel_flags_nocalib, rcmodel_flags_badcentroid, rcmodel_dev_flux_flags_apcorr, rcmodel_exp_flux_flags_apcorr, rcmodel_flux_flags_apcorr, rcountinputs, rvariance, rclassification_extendedness
           , rflags_pixel_edge, rflags_pixel_interpolated_any, rflags_pixel_interpolated_center, rflags_pixel_saturated_any, rflags_pixel_saturated_center, rflags_pixel_cr_any, rflags_pixel_cr_center, rflags_pixel_bad, rflags_pixel_suspect_any, rflags_pixel_suspect_center, rflags_pixel_offimage, rflags_pixel_bright_object_center, rflags_pixel_clipped_any, rflags_pixel_bright_object_any, iflux_naive
-          , imag_naive
-          , iflux_naive_err
-          , imag_naive_err
-          , iflux_naive_flags
-          , iflux_sinc
-          , imag_sinc
-          , iflux_sinc_err
-          , imag_sinc_err
-          , iflux_sinc_flags
-          , iflux_psf
-          , imag_psf
-          , iflux_psf_err
-          , imag_psf_err
-          , iflux_psf_apcorr
-          , iflux_psf_apcorr_err
-          , iflux_psf_flags
-          , iflux_psf_flags_apcorr
-          , iflux_kron
-          , imag_kron
-          , iflux_kron_err
-          , imag_kron_err
+          , imag_naive, iflux_naive_err, imag_naive_err, iflux_naive_flags, iflux_sinc, imag_sinc, iflux_sinc_err, imag_sinc_err, iflux_sinc_flags, iflux_psf, imag_psf, iflux_psf_err, imag_psf_err, iflux_psf_apcorr, iflux_psf_apcorr_err, iflux_psf_flags, iflux_psf_flags_apcorr, iflux_kron, imag_kron, iflux_kron_err, imag_kron_err
           , iflux_kron_radius, iflux_kron_radiusforradius, iflux_kron_psfradius, iflux_kron_apcorr, iflux_kron_apcorr_err, iflux_kron_flags, iflux_kron_flags_edge, iflux_kron_flags_radius, iflux_kron_flags_smallradius, iflux_kron_flags_usedminimumradius, iflux_kron_flags_usedpsfradius, iflux_kron_flags_badshape, iflux_kron_flags_apcorr
-          , iflux_aperture10
-          , imag_aperture10
-          , iflux_aperture15
-          , imag_aperture15
-          , iflux_aperture20
-          , imag_aperture20
-          , iflux_aperture30
-          , imag_aperture30
-          , iflux_aperture40
-          , imag_aperture40
-          , iflux_aperture57
-          , imag_aperture57
-          , iflux_aperture84
-          , imag_aperture84
-          , iflux_aperture118
-          , imag_aperture118
-          , iflux_aperture168
-          , imag_aperture168
-          , iflux_aperture235
-          , imag_aperture235
-          , iflux_aperture10_err
-          , imag_aperture10_err
-          , iflux_aperture15_err
-          , imag_aperture15_err
-          , iflux_aperture20_err
-          , imag_aperture20_err
-          , iflux_aperture30_err
-          , imag_aperture30_err
-          , iflux_aperture40_err
-          , imag_aperture40_err
-          , iflux_aperture57_err
-          , imag_aperture57_err
-          , iflux_aperture84_err
-          , imag_aperture84_err
-          , iflux_aperture118_err
-          , imag_aperture118_err
-          , iflux_aperture168_err
-          , imag_aperture168_err
-          , iflux_aperture235_err
-          , imag_aperture235_err
+          , iflux_aperture10, imag_aperture10, iflux_aperture15, imag_aperture15, iflux_aperture20, imag_aperture20, iflux_aperture30, imag_aperture30, iflux_aperture40, imag_aperture40, iflux_aperture57, imag_aperture57, iflux_aperture84, imag_aperture84, iflux_aperture118, imag_aperture118, iflux_aperture168, imag_aperture168, iflux_aperture235, imag_aperture235, iflux_aperture10_err, imag_aperture10_err, iflux_aperture15_err, imag_aperture15_err, iflux_aperture20_err, imag_aperture20_err, iflux_aperture30_err, imag_aperture30_err, iflux_aperture40_err, imag_aperture40_err, iflux_aperture57_err, imag_aperture57_err, iflux_aperture84_err, imag_aperture84_err, iflux_aperture118_err, imag_aperture118_err, iflux_aperture168_err, imag_aperture168_err, iflux_aperture235_err, imag_aperture235_err
           , iflux_aperture10_ninterpolatedpixel, iflux_aperture15_ninterpolatedpixel, iflux_aperture20_ninterpolatedpixel, iflux_aperture30_ninterpolatedpixel, iflux_aperture40_ninterpolatedpixel, iflux_aperture57_ninterpolatedpixel, iflux_aperture84_ninterpolatedpixel, iflux_aperture118_ninterpolatedpixel, iflux_aperture168_ninterpolatedpixel, iflux_aperture235_ninterpolatedpixel, iflux_aperture_nprofile, iflux_aperture_flags
           , icentroid_naive_ra, icentroid_naive_dec, icentroid_naive_flags, icentroid_sdss_ra, icentroid_sdss_dec, icentroid_sdss_err_11, icentroid_sdss_err_22, icentroid_sdss_flags
           , imultishapelet_psf_inner0, imultishapelet_psf_inner1, imultishapelet_psf_inner2, imultishapelet_psf_inner3, imultishapelet_psf_inner4, imultishapelet_psf_inner5, imultishapelet_psf_outer0, imultishapelet_psf_outer1, imultishapelet_psf_outer2, imultishapelet_psf_ellipse_11, imultishapelet_psf_ellipse_22, imultishapelet_psf_ellipse_12, imultishapelet_psf_chisq, imultishapelet_psf_integral, imultishapelet_psf_flags, imultishapelet_psf_flags_maxiter, imultishapelet_psf_flags_tinystep, imultishapelet_psf_flags_constraint_r, imultishapelet_psf_flags_constraint_q
           , ishape_sdss_11, ishape_sdss_22, ishape_sdss_12, ishape_sdss_err_11_11, ishape_sdss_err_22_22, ishape_sdss_err_12_12, ishape_sdss_centroid_ra, ishape_sdss_centroid_dec, ishape_sdss_psf_11, ishape_sdss_psf_22, ishape_sdss_psf_12, ishape_sdss_flags, ishape_sdss_centroid_flags, ishape_sdss_flags_unweightedbad, ishape_sdss_flags_unweighted, ishape_sdss_flags_shift, ishape_sdss_flags_maxiter, ishape_sdss_flags_psf
           , icmodel_initial_flux, icmodel_initial_mag, icmodel_initial_flux_err, icmodel_initial_mag_err, icmodel_initial_flux_inner, icmodel_initial_mag_inner, icmodel_exp_flux, icmodel_exp_mag, icmodel_exp_flux_err, icmodel_exp_mag_err, icmodel_exp_flux_inner, icmodel_exp_mag_inner, icmodel_dev_flux, icmodel_dev_mag, icmodel_dev_flux_err, icmodel_dev_mag_err, icmodel_dev_flux_inner, icmodel_dev_mag_inner, icmodel_center_ra, icmodel_center_dec, icmodel_flux, icmodel_mag, icmodel_flux_err, icmodel_mag_err, icmodel_flux_inner, icmodel_mag_inner, icmodel_fracdev, icmodel_objective, icmodel_dev_flux_apcorr, icmodel_dev_flux_apcorr_err, icmodel_exp_flux_apcorr, icmodel_exp_flux_apcorr_err, icmodel_flux_apcorr, icmodel_flux_apcorr_err, icmodel_initial_flux_flags, icmodel_initial_flags_badreference, icmodel_initial_flags_numericerror, icmodel_exp_flux_flags, icmodel_exp_flags_badreference, icmodel_exp_flags_numericerror, icmodel_dev_flux_flags, icmodel_dev_flags_badreference, icmodel_dev_flags_numericerror, icmodel_flux_flags, icmodel_flags_region_maxarea, icmodel_flags_region_maxbadpixelfraction, icmodel_flags_badreference, icmodel_flags_nopsf, icmodel_flags_nowcs, icmodel_flags_nocalib, icmodel_flags_badcentroid, icmodel_dev_flux_flags_apcorr, icmodel_exp_flux_flags_apcorr, icmodel_flux_flags_apcorr, icountinputs
-          , ivariance
-          , iclassification_extendedness
+          , ivariance, iclassification_extendedness
           , iflags_pixel_edge, iflags_pixel_interpolated_any, iflags_pixel_interpolated_center, iflags_pixel_saturated_any, iflags_pixel_saturated_center, iflags_pixel_cr_any, iflags_pixel_cr_center, iflags_pixel_bad, iflags_pixel_suspect_any, iflags_pixel_suspect_center, iflags_pixel_offimage, iflags_pixel_bright_object_center, iflags_pixel_clipped_any, iflags_pixel_bright_object_any
-          , zflux_naive
-          , zmag_naive
-          , zflux_naive_err
-          , zmag_naive_err
-          , zflux_naive_flags
-          , zflux_sinc
-          , zmag_sinc
-          , zflux_sinc_err
-          , zmag_sinc_err
-          , zflux_sinc_flags
-          , zflux_psf
-          , zmag_psf
-          , zflux_psf_err
-          , zmag_psf_err
-          , zflux_psf_apcorr
-          , zflux_psf_apcorr_err
-          , zflux_psf_flags
-          , zflux_psf_flags_apcorr
-          , zflux_kron
-          , zmag_kron
-          , zflux_kron_err
-          , zmag_kron_err
+          , zflux_naive, zmag_naive, zflux_naive_err, zmag_naive_err, zflux_naive_flags, zflux_sinc, zmag_sinc, zflux_sinc_err, zmag_sinc_err, zflux_sinc_flags, zflux_psf, zmag_psf, zflux_psf_err, zmag_psf_err, zflux_psf_apcorr, zflux_psf_apcorr_err, zflux_psf_flags, zflux_psf_flags_apcorr, zflux_kron, zmag_kron, zflux_kron_err, zmag_kron_err
           , zflux_kron_radius, zflux_kron_radiusforradius, zflux_kron_psfradius, zflux_kron_apcorr, zflux_kron_apcorr_err, zflux_kron_flags, zflux_kron_flags_edge, zflux_kron_flags_radius, zflux_kron_flags_smallradius, zflux_kron_flags_usedminimumradius, zflux_kron_flags_usedpsfradius, zflux_kron_flags_badshape, zflux_kron_flags_apcorr, zflux_aperture10
-          , zmag_aperture10
-          , zflux_aperture15
-          , zmag_aperture15
-          , zflux_aperture20
-          , zmag_aperture20
-          , zflux_aperture30
-          , zmag_aperture30
-          , zflux_aperture40
-          , zmag_aperture40
-          , zflux_aperture57
-          , zmag_aperture57
-          , zflux_aperture84
-          , zmag_aperture84
-          , zflux_aperture118
-          , zmag_aperture118
-          , zflux_aperture168
-          , zmag_aperture168
-          , zflux_aperture235
-          , zmag_aperture235
-          , zflux_aperture10_err
-          , zmag_aperture10_err
-          , zflux_aperture15_err
-          , zmag_aperture15_err
-          , zflux_aperture20_err
-          , zmag_aperture20_err
-          , zflux_aperture30_err
-          , zmag_aperture30_err
-          , zflux_aperture40_err
-          , zmag_aperture40_err
-          , zflux_aperture57_err
-          , zmag_aperture57_err
-          , zflux_aperture84_err
-          , zmag_aperture84_err
-          , zflux_aperture118_err
-          , zmag_aperture118_err
-          , zflux_aperture168_err
-          , zmag_aperture168_err
-          , zflux_aperture235_err
-          , zmag_aperture235_err
+          , zmag_aperture10, zflux_aperture15, zmag_aperture15, zflux_aperture20, zmag_aperture20, zflux_aperture30, zmag_aperture30, zflux_aperture40, zmag_aperture40, zflux_aperture57, zmag_aperture57, zflux_aperture84, zmag_aperture84, zflux_aperture118, zmag_aperture118, zflux_aperture168, zmag_aperture168, zflux_aperture235, zmag_aperture235, zflux_aperture10_err, zmag_aperture10_err, zflux_aperture15_err, zmag_aperture15_err, zflux_aperture20_err, zmag_aperture20_err, zflux_aperture30_err, zmag_aperture30_err, zflux_aperture40_err, zmag_aperture40_err, zflux_aperture57_err, zmag_aperture57_err, zflux_aperture84_err, zmag_aperture84_err, zflux_aperture118_err, zmag_aperture118_err, zflux_aperture168_err, zmag_aperture168_err, zflux_aperture235_err, zmag_aperture235_err
           , zflux_aperture10_ninterpolatedpixel, zflux_aperture15_ninterpolatedpixel, zflux_aperture20_ninterpolatedpixel, zflux_aperture30_ninterpolatedpixel, zflux_aperture40_ninterpolatedpixel, zflux_aperture57_ninterpolatedpixel, zflux_aperture84_ninterpolatedpixel, zflux_aperture118_ninterpolatedpixel, zflux_aperture168_ninterpolatedpixel, zflux_aperture235_ninterpolatedpixel, zflux_aperture_nprofile, zflux_aperture_flags
           , zcentroid_naive_ra, zcentroid_naive_dec, zcentroid_naive_flags, zcentroid_sdss_ra, zcentroid_sdss_dec, zcentroid_sdss_err_11, zcentroid_sdss_err_22, zcentroid_sdss_flags
           , zmultishapelet_psf_inner0, zmultishapelet_psf_inner1, zmultishapelet_psf_inner2, zmultishapelet_psf_inner3, zmultishapelet_psf_inner4, zmultishapelet_psf_inner5, zmultishapelet_psf_outer0, zmultishapelet_psf_outer1, zmultishapelet_psf_outer2, zmultishapelet_psf_ellipse_11, zmultishapelet_psf_ellipse_22, zmultishapelet_psf_ellipse_12, zmultishapelet_psf_chisq, zmultishapelet_psf_integral, zmultishapelet_psf_flags, zmultishapelet_psf_flags_maxiter, zmultishapelet_psf_flags_tinystep, zmultishapelet_psf_flags_constraint_r, zmultishapelet_psf_flags_constraint_q
           , zshape_sdss_11, zshape_sdss_22, zshape_sdss_12, zshape_sdss_err_11_11, zshape_sdss_err_22_22, zshape_sdss_err_12_12, zshape_sdss_centroid_ra, zshape_sdss_centroid_dec, zshape_sdss_psf_11, zshape_sdss_psf_22, zshape_sdss_psf_12, zshape_sdss_flags, zshape_sdss_centroid_flags, zshape_sdss_flags_unweightedbad, zshape_sdss_flags_unweighted, zshape_sdss_flags_shift, zshape_sdss_flags_maxiter, zshape_sdss_flags_psf
           , zcmodel_initial_flux, zcmodel_initial_mag, zcmodel_initial_flux_err, zcmodel_initial_mag_err, zcmodel_initial_flux_inner, zcmodel_initial_mag_inner, zcmodel_exp_flux, zcmodel_exp_mag, zcmodel_exp_flux_err, zcmodel_exp_mag_err, zcmodel_exp_flux_inner, zcmodel_exp_mag_inner, zcmodel_dev_flux, zcmodel_dev_mag, zcmodel_dev_flux_err, zcmodel_dev_mag_err, zcmodel_dev_flux_inner, zcmodel_dev_mag_inner, zcmodel_center_ra, zcmodel_center_dec, zcmodel_flux, zcmodel_mag, zcmodel_flux_err, zcmodel_mag_err, zcmodel_flux_inner, zcmodel_mag_inner, zcmodel_fracdev, zcmodel_objective, zcmodel_dev_flux_apcorr, zcmodel_dev_flux_apcorr_err, zcmodel_exp_flux_apcorr, zcmodel_exp_flux_apcorr_err, zcmodel_flux_apcorr, zcmodel_flux_apcorr_err, zcmodel_initial_flux_flags, zcmodel_initial_flags_badreference, zcmodel_initial_flags_numericerror, zcmodel_exp_flux_flags, zcmodel_exp_flags_badreference, zcmodel_exp_flags_numericerror, zcmodel_dev_flux_flags, zcmodel_dev_flags_badreference, zcmodel_dev_flags_numericerror, zcmodel_flux_flags, zcmodel_flags_region_maxarea, zcmodel_flags_region_maxbadpixelfraction, zcmodel_flags_badreference, zcmodel_flags_nopsf, zcmodel_flags_nowcs, zcmodel_flags_nocalib, zcmodel_flags_badcentroid, zcmodel_dev_flux_flags_apcorr, zcmodel_exp_flux_flags_apcorr, zcmodel_flux_flags_apcorr
-          , zcountinputs
-          , zvariance
+          , zcountinputs, zvariance
           , zclassification_extendedness, zflags_pixel_edge, zflags_pixel_interpolated_any, zflags_pixel_interpolated_center, zflags_pixel_saturated_any, zflags_pixel_saturated_center, zflags_pixel_cr_any, zflags_pixel_cr_center, zflags_pixel_bad, zflags_pixel_suspect_any, zflags_pixel_suspect_center, zflags_pixel_offimage, zflags_pixel_bright_object_center, zflags_pixel_clipped_any, zflags_pixel_bright_object_any
-          , yflux_naive
-          , ymag_naive
-          , yflux_naive_err
-          , ymag_naive_err
-          , yflux_naive_flags
-          , yflux_sinc
-          , ymag_sinc
-          , yflux_sinc_err
-          , ymag_sinc_err
-          , yflux_sinc_flags
-          , yflux_psf
-          , ymag_psf
-          , yflux_psf_err
-          , ymag_psf_err
+          , yflux_naive, ymag_naive, yflux_naive_err, ymag_naive_err, yflux_naive_flags, yflux_sinc, ymag_sinc, yflux_sinc_err, ymag_sinc_err, yflux_sinc_flags, yflux_psf, ymag_psf, yflux_psf_err, ymag_psf_err
           , yflux_psf_apcorr, yflux_psf_apcorr_err, yflux_psf_flags, yflux_psf_flags_apcorr, yflux_kron, ymag_kron, yflux_kron_err, ymag_kron_err
           , yflux_kron_radius, yflux_kron_radiusforradius, yflux_kron_psfradius, yflux_kron_apcorr, yflux_kron_apcorr_err, yflux_kron_flags, yflux_kron_flags_edge, yflux_kron_flags_radius, yflux_kron_flags_smallradius, yflux_kron_flags_usedminimumradius, yflux_kron_flags_usedpsfradius, yflux_kron_flags_badshape, yflux_kron_flags_apcorr
-          , yflux_aperture10
-          , ymag_aperture10
-          , yflux_aperture15
-          , ymag_aperture15
-          , yflux_aperture20
-          , ymag_aperture20
-          , yflux_aperture30
-          , ymag_aperture30
-          , yflux_aperture40
-          , ymag_aperture40
-          , yflux_aperture57
-          , ymag_aperture57
-          , yflux_aperture84
-          , ymag_aperture84
-          , yflux_aperture118
-          , ymag_aperture118
-          , yflux_aperture168
-          , ymag_aperture168
-          , yflux_aperture235
-          , ymag_aperture235
-          , yflux_aperture10_err
-          , ymag_aperture10_err
-          , yflux_aperture15_err
-          , ymag_aperture15_err
-          , yflux_aperture20_err
-          , ymag_aperture20_err
-          , yflux_aperture30_err
-          , ymag_aperture30_err
-          , yflux_aperture40_err
-          , ymag_aperture40_err
-          , yflux_aperture57_err
-          , ymag_aperture57_err
-          , yflux_aperture84_err
-          , ymag_aperture84_err
-          , yflux_aperture118_err
-          , ymag_aperture118_err
-          , yflux_aperture168_err
-          , ymag_aperture168_err
-          , yflux_aperture235_err
-          , ymag_aperture235_err
+          , yflux_aperture10, ymag_aperture10, yflux_aperture15, ymag_aperture15, yflux_aperture20, ymag_aperture20, yflux_aperture30, ymag_aperture30, yflux_aperture40, ymag_aperture40, yflux_aperture57, ymag_aperture57, yflux_aperture84, ymag_aperture84, yflux_aperture118, ymag_aperture118, yflux_aperture168, ymag_aperture168, yflux_aperture235, ymag_aperture235, yflux_aperture10_err, ymag_aperture10_err, yflux_aperture15_err, ymag_aperture15_err, yflux_aperture20_err, ymag_aperture20_err, yflux_aperture30_err, ymag_aperture30_err, yflux_aperture40_err, ymag_aperture40_err, yflux_aperture57_err, ymag_aperture57_err, yflux_aperture84_err, ymag_aperture84_err, yflux_aperture118_err, ymag_aperture118_err, yflux_aperture168_err, ymag_aperture168_err, yflux_aperture235_err, ymag_aperture235_err
           , yflux_aperture10_ninterpolatedpixel, yflux_aperture15_ninterpolatedpixel, yflux_aperture20_ninterpolatedpixel, yflux_aperture30_ninterpolatedpixel, yflux_aperture40_ninterpolatedpixel, yflux_aperture57_ninterpolatedpixel, yflux_aperture84_ninterpolatedpixel, yflux_aperture118_ninterpolatedpixel, yflux_aperture168_ninterpolatedpixel, yflux_aperture235_ninterpolatedpixel, yflux_aperture_nprofile, yflux_aperture_flags
           , ycentroid_naive_ra, ycentroid_naive_dec, ycentroid_naive_flags, ycentroid_sdss_ra, ycentroid_sdss_dec, ycentroid_sdss_err_11, ycentroid_sdss_err_22, ycentroid_sdss_flags
           , ymultishapelet_psf_inner0, ymultishapelet_psf_inner1, ymultishapelet_psf_inner2, ymultishapelet_psf_inner3, ymultishapelet_psf_inner4, ymultishapelet_psf_inner5, ymultishapelet_psf_outer0, ymultishapelet_psf_outer1, ymultishapelet_psf_outer2, ymultishapelet_psf_ellipse_11, ymultishapelet_psf_ellipse_22, ymultishapelet_psf_ellipse_12, ymultishapelet_psf_chisq, ymultishapelet_psf_integral, ymultishapelet_psf_flags, ymultishapelet_psf_flags_maxiter, ymultishapelet_psf_flags_tinystep, ymultishapelet_psf_flags_constraint_r, ymultishapelet_psf_flags_constraint_q
           , yshape_sdss_11, yshape_sdss_22, yshape_sdss_12, yshape_sdss_err_11_11, yshape_sdss_err_22_22, yshape_sdss_err_12_12, yshape_sdss_centroid_ra, yshape_sdss_centroid_dec, yshape_sdss_psf_11, yshape_sdss_psf_22, yshape_sdss_psf_12, yshape_sdss_flags, yshape_sdss_centroid_flags, yshape_sdss_flags_unweightedbad, yshape_sdss_flags_unweighted, yshape_sdss_flags_shift, yshape_sdss_flags_maxiter, yshape_sdss_flags_psf
           , ycmodel_initial_flux, ycmodel_initial_mag, ycmodel_initial_flux_err, ycmodel_initial_mag_err, ycmodel_initial_flux_inner, ycmodel_initial_mag_inner, ycmodel_exp_flux, ycmodel_exp_mag, ycmodel_exp_flux_err, ycmodel_exp_mag_err, ycmodel_exp_flux_inner, ycmodel_exp_mag_inner, ycmodel_dev_flux, ycmodel_dev_mag, ycmodel_dev_flux_err, ycmodel_dev_mag_err, ycmodel_dev_flux_inner, ycmodel_dev_mag_inner, ycmodel_center_ra, ycmodel_center_dec, ycmodel_flux, ycmodel_mag, ycmodel_flux_err, ycmodel_mag_err, ycmodel_flux_inner, ycmodel_mag_inner, ycmodel_fracdev, ycmodel_objective, ycmodel_dev_flux_apcorr, ycmodel_dev_flux_apcorr_err, ycmodel_exp_flux_apcorr, ycmodel_exp_flux_apcorr_err, ycmodel_flux_apcorr, ycmodel_flux_apcorr_err, ycmodel_initial_flux_flags, ycmodel_initial_flags_badreference, ycmodel_initial_flags_numericerror, ycmodel_exp_flux_flags, ycmodel_exp_flags_badreference, ycmodel_exp_flags_numericerror, ycmodel_dev_flux_flags, ycmodel_dev_flags_badreference, ycmodel_dev_flags_numericerror, ycmodel_flux_flags, ycmodel_flags_region_maxarea, ycmodel_flags_region_maxbadpixelfraction, ycmodel_flags_badreference, ycmodel_flags_nopsf, ycmodel_flags_nowcs, ycmodel_flags_nocalib, ycmodel_flags_badcentroid, ycmodel_dev_flux_flags_apcorr, ycmodel_exp_flux_flags_apcorr, ycmodel_flux_flags_apcorr
-          , ycountinputs
-          , yvariance
-          , yclassification_extendedness
+          , ycountinputs, yvariance, yclassification_extendedness
           , yflags_pixel_edge, yflags_pixel_interpolated_any, yflags_pixel_interpolated_center, yflags_pixel_saturated_any, yflags_pixel_saturated_center, yflags_pixel_cr_any, yflags_pixel_cr_center, yflags_pixel_bad, yflags_pixel_suspect_any, yflags_pixel_suspect_center, yflags_pixel_offimage, yflags_pixel_bright_object_center, yflags_pixel_clipped_any, yflags_pixel_bright_object_any
         )
       }
