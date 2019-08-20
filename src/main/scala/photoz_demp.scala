@@ -1,6 +1,7 @@
 package udafApp
 
 import org.apache.spark.SparkContext
+import org.apache.spark.sql.{DataFrame, SQLContext}
 
 object photoz_demp {
 
@@ -9,7 +10,7 @@ object photoz_demp {
                             )
 
   case class photozdemp(
-                         object_id: Int
+                         object_id: Long
                          , photoz_mean: Float
                          , photoz_mode: Float
                          , photoz_median: Float
@@ -32,11 +33,32 @@ object photoz_demp {
                          , photoz_err95_min: Float
                          , photoz_err95_max: Float
                        )
+    
+  case class meas(
+                   object_id: Long
+                   , meas_value: String
+                  )
+  case class meas(
+                   object_id: Long
+                   , meas_value: String
+                  )
 
-  // data_location = /user/suga/pdr1_hive/pdr1_wide_photoz_demp
+  
+  /* 
+    /user/suga/pdr1_hive/pdr1_wide_photoz_demp/pdr1_wide.photoz_demp
+    /user/suga/pdr1_hive/pdr1_wide_meas/pdr1_wide.meas
+    /user/suga/pdr1_hive/pdr1_wide/forced
+  */
+  sc.textFile("/user/suga/pdr1_hive/pdr1_wide/forced")
+  // 84,017,247
+  sc.textFile("/user/suga/pdr1_hive/pdr1_wide_meas/pdr1_wide.meas")
+  // 84,042,022
+  sc.textFile("/user/suga/pdr1_hive/pdr1_wide_photoz_demp/pdr1_wide.photoz_demp")
+  // 52,658,163
 
   def photoz(sc: SparkContext) = {
-    sc.textFile("hdfs:///user/matsumoto/sample_pdr1_wide.photoz_demp").
+
+    val photoz_demp = sc.textFile("hdfs:///user/matsumoto/sample_pdr1_wide.photoz_demp").
       map { lines =>
         val elms = lines.split(",")
         val object_id = elms(0).toLong
@@ -62,7 +84,7 @@ object photoz_demp {
         val photoz_err95_min = elms(20).toFloat
         val photoz_err95_max = elms(21).toFloat
 
-        (
+        photozdemp(
           object_id
           , photoz_mean, photoz_mode, photoz_median, photoz_best, photoz_mc
           , photoz_conf_mean, photoz_conf_mode, photoz_conf_median, photoz_conf_best
@@ -71,5 +93,25 @@ object photoz_demp {
           , photoz_err68_min, photoz_err68_max, photoz_err95_min, photoz_err95_max
         )
       }
+
+    photoz_demp.registerTempTable("photoz_demp")
+    
+    val df_meas = sc.textFile("hdfs:///user/matsumoto/sample_pdr1_wide.meas").
+      map{lines =>
+            meas(lines.split(",")(0).toLong, lines)
+          }.toDF
+    df_meas.registerTempTable("meas")
+    
+    val df_forced = sc.textFile("hdfs:///user/matsumoto/sample_pdr1_wide.forced").
+      map{lines =>
+            forced(lines.split(",")(0).toLong, lines)
+          }.toDF
+    df_forced.registerTempTable("forced")
+
+    df_forced.
+      join( df_meas, df_forced("object_id") === df_meas("object_id"), "left" ).
+      join( photoz_demp, df_forced("object_id") === photoz_demp("object_id"), "inner").
+      show()
+
   }
 }

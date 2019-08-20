@@ -1076,7 +1076,7 @@ object ReadPDR1 {
                   )
 
   def forced(sc: SparkContext) = {
-    sc.textFile("hdfs:///user/matsumoto/sample_pdr1_wide.photoz_demp").
+    sc.textFile("hdfs:///user/matsumoto/sample_pdr1_wide.forced").
       map { lines =>
         val elms = lines.split(',')
         val object_id = elms(0).toLong
