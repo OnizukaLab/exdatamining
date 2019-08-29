@@ -1,10 +1,18 @@
 # exdatamining
 ## 実行環境
+* spark2
+* Data Location : hdfs:///user/matsumoto/joined/
+
+## 実行方法
+1. spark2-submit 
+-- 以下、対応したアプリケーション等のインストールが必要
+2. sbt run (build.sbt が存在するディレクトリにて)
+3. IntelliJ での RUN (local 環境にて)
 
 ## ファイル構成
 - src
     - main
-        - python : 
+        - python : データ加工に使用した jupyter
         - scala : 
 	- sql : pdr1 に関するサンプルの sql コード
     - recources
@@ -13,7 +21,7 @@
             - all.csv 
 - results
     - （各種データ名のフォルダ）
-- build.sbt
+- build.sbt : scala コードのビルド時の設定ファイル
 
 ## 使用しているパラメータ
 ### データファイル
@@ -44,8 +52,3 @@
 
 ### 例
 1. 
-
-## 実行方法
-1. spark-submit 
-2. sbt run (build.sbt が存在するディレクトリにて)
-3. IntelliJ での RUN
