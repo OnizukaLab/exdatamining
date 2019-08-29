@@ -38,6 +38,7 @@ object ReadData {
     sqlContext.read.format("com.databricks.spark.csv").option("header", "true")
       .load("./src/resources/tmp/all.csv")
   }
+
   /*--------------------
     データサイズの変更用関数
    --------------------*/
