@@ -15,4 +15,5 @@ metastore_db
 src/*/*/*/*.html
 
 # python 関連
+src/*/*/.ipynb_checkpoints
 src/*/*/*.py~
