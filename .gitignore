@@ -13,6 +13,8 @@ metastore_db
 */*/*.csv
 */*/*/*.csv
 src/*/*/*/*.html
+src/data
+src/resources
 
 # python 関連
 src/*/*/.ipynb_checkpoints

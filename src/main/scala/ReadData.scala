@@ -25,18 +25,22 @@ object ReadData {
   /*----------
     関数
    ----------*/
-  def read_split_data(sqlContext: SQLContext, data_flg: Int, partition: Int): Array[DataFrame] = {
-    var BlockDF: Array[DataFrame] = Array.empty[DataFrame]
+  def read_split_data(sqlContext: SQLContext, data_flg: Int, pertition: Int): Array[DataFrame] = {
+    val all_DF = read_parquet_flight(sqlContext)
+    val BlockDF: Array[DataFrame] = all_DF.randomSplit(Array.fill(pertition)(1.0 / pertition))
+
+    /*
     (0 until partition).foreach(i =>
       BlockDF = BlockDF :+ sqlContext.read.format("com.databricks.spark.csv").option("header", "true")
         .load("./src/resources/tmp/%s.csv" format i)
     )
+    */
     BlockDF
   }
 
+
   def read_all_data(sqlContext: SQLContext): DataFrame = {
-    sqlContext.read.format("com.databricks.spark.csv").option("header", "true")
-      .load("./src/resources/tmp/all.csv")
+    read_parquet_flight(sqlContext)
   }
 
   /*--------------------
@@ -62,6 +66,13 @@ object ReadData {
   //------------------------------------------------------------------------------------------------------------------------
   //------------------------------------------------------------------------------------------------------------------------
   //------------------------------------------------------------------------------------------------------------------------
+
+  // データ読み込み (Flight data)
+  def read_parquet_flight(sqlContext: SQLContext): DataFrame = {
+    sqlContext.read.
+      format("parquet").
+      load("./src/data/flights/")
+  }
 
   // データ読み込み (Flight data)
   def read_flight_data(sqlContext: SQLContext): DataFrame = {

@@ -1,6 +1,7 @@
 package udafApp
 
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -122,29 +123,38 @@ object udafApp {
     val method: String = ("Baseline", "Share", "SharePruning")._1
     val output_ver: String = ("Experiment", "Correct")._1
 
-    val DF_block: Array[DataFrame] = ReadData.read_split_data(sqlContext, data_flg = data, partition = pertition)
+    val DF_block: Array[DataFrame] = ReadData.read_split_data(sqlContext,
+      data_flg = data,
+      pertition = pertition
+    )
     val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext)
 
-    ALL_DF.cache()
     DF_block.foreach(b => b.cache())
-
-
-    sqlContext.udf.register("Engine", new ExperimentEngine)
-    ALL_DF.createOrReplaceTempView("test")
-
-
-    var udaf_time: Int = System.currentTimeMillis().toInt
-    //part_cube ++= execute_udaf("test").first().getMap[String, Map[String, Seq[Double]]](0) //UDAFの実行 + MaP型への変換
-    udaf_time = System.currentTimeMillis().toInt - udaf_time
+    ALL_DF.cache()
+    ALL_DF.createOrReplaceTempView("all")
 
     var sql_time: Int = System.currentTimeMillis().toInt
-    val sample_df = execute_all_subset_query("test")
-    //  .map { r =>r.toSeq.head.toString -> Map(r.toSeq(1) -> Seq(r.toSeq(3).toString.toDouble, r.toSeq(3).toString.toDouble))}.toMap
+    var sample_df = execute_all_subset_query("all")
+
+    sample_df = sample_df.
+      withColumn("sum_upper", $"sum" + sum_interval('count, 'variance)).
+      withColumn("sum_lower", $"sum" - sum_interval('count, 'variance)).
+      withColumn("avg_upper", $"avg" + avg_interval('count, 'variance)).
+      withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
+
     sample_df.show()
+
     sql_time = System.currentTimeMillis().toInt - sql_time
 
-    println("udaf time : %s" format udaf_time / 1000)
     println("sql time : %s" format sql_time / 1000)
+
+    Application.gof(
+      k,
+      agg_func,
+      z_p,
+      ALL_DF.agg(y -> "count", y -> "avg", y -> "sum", y -> "var_samp"),
+      sample_df
+    )
 
     /*
     for (roop_iterator <- k_list) { // データサイズ(size_list) or 探索件数のパラメータ変更(k_list)
@@ -173,6 +183,21 @@ object udafApp {
     sc.stop
   }
 
+  // udf
+  private def make_sum_interval = (c: String, v: String) => {
+    math.sqrt(c.toDouble * z_p * v.toDouble)
+  }
+
+  val sum_interval = udf(make_sum_interval)
+
+  private def make_avg_interval = (c: String, v: String) => {
+    math.sqrt(z_p * v.toDouble / c.toDouble)
+  }
+
+  val avg_interval = udf(make_avg_interval)
+
+
+  // dataframe to map
   private def summarizeAsMap(df: DataFrame): RDD[(String, Map[String, Long])] = {
     /*
       df[col1, col2, col3] ->
@@ -187,6 +212,7 @@ object udafApp {
     mapRdd
   }
 
+  // output
   private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
     println(output_ver)
     output_ver match {
@@ -243,7 +269,7 @@ object udafApp {
 
   private def execute_all_subset_query(table: String): DataFrame = {
     sqlContext.sql(
-      "SELECT %s, %s, count(*), sum(%s)/count(*), variance(%s) FROM %s GROUP BY %s, %s" format(s, x, y, y, table, s, x)
+      "SELECT %s, %s, count(*) as count, avg(%s) as avg, sum(%s) as sum, variance(%s) as variance FROM %s GROUP BY %s, %s" format(s, x, y, y, y, table, s, x)
     )
   }
 

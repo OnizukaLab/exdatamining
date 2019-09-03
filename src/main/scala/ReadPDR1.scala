@@ -1,7 +1,5 @@
 package udafApp
 
-import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SQLContext}
 
@@ -33,7 +31,7 @@ object ReadPDR1 {
   /*----------
    関数
   ----------*/
-  def stronomical(sqlContext: SQLContext): DataFrame = {
+  def astronomical(sqlContext: SQLContext): DataFrame = {
     //val sqlContext = new SQLContext(sc)
     sqlContext.read.format("parquet").load(joined_file_path)
   }
