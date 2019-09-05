@@ -1,6 +1,7 @@
 package udafApp
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.{DataFrame, SQLContext}
 
 import scala.math.{abs, _}
 
@@ -41,25 +42,37 @@ object Application {
     4. 足切りの部分データのkey情報のList化
     5. 返り値の設定
     ------------------------------*/
-  def gof(k: Int, agg_func: String, z_p: Double, all_df: DataFrame, df: DataFrame): List[String] = {
-    // step.1
-    val Seq(all_count, all_avg, all_sum, all_var) = all_df.head.toSeq
-    val all_interval: (Double, Double) = agg_func match {
-      case "AVG" =>
-        (all_avg.toString.toDouble + math.sqrt(z_p * all_var.toString.toDouble / all_count.toString.toDouble),
-          all_avg.toString.toDouble - math.sqrt(z_p * all_var.toString.toDouble / all_count.toString.toDouble))
-      case "SUM" =>
-        (all_sum.toString.toDouble + math.sqrt(z_p * all_var.toString.toDouble * all_count.toString.toDouble),
-          all_sum.toString.toDouble - math.sqrt(z_p * all_var.toString.toDouble * all_count.toString.toDouble))
-    }
+  def gof(sqlContext: SQLContext, k: Int, agg_func: String, z_p: Double, gof_df: DataFrame): List[String] = {
+    import sqlContext.implicits._
+    // step. 1
     // step. 2
+    var dev_df: DataFrame = gof_df.
+      withColumn("dev_upper", calc_dev('avg_upper, 'avg_lower, 'all_avg_upper, 'all_avg_lower)(0)).
+      withColumn("dev_lower", calc_dev('avg_upper, 'avg_lower, 'all_avg_upper, 'all_avg_lower)(1)).orderBy($"dev_upper".desc)
+    dev_df.show()
+
     // step. 3
-    val under_threshold: Double = ???
+    val under_threshold: Double = 0.0
     // step. 4
 
     // step. 5
     return List[String]()
   }
+
+  // udf
+  val calc_dev = udf { (u: String, l: String, all_u: String, all_l: String) =>
+    val zero_flg = (u.toDouble - all_l.toDouble) * (l.toDouble - all_u.toDouble)
+
+    Array(
+      List(abs(u.toDouble - all_l.toDouble), abs(l.toDouble - all_u.toDouble), 0.0).max, //乖離度の上限
+      zero_flg match {
+        case z if z <= 0 => 0.0
+        case z if z > 0 => List(abs(u.toDouble - all_u.toDouble), abs(l.toDouble - all_l.toDouble), abs(u.toDouble - all_l.toDouble), abs(l.toDouble - all_u.toDouble)).min
+        case _ => 0.0
+      } //乖離度の下限
+    )
+  }
+
 
   /* LOF for dataframe ----------
   1. 全体平均の計算

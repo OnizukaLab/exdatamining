@@ -123,39 +123,45 @@ object udafApp {
     val method: String = ("Baseline", "Share", "SharePruning")._1
     val output_ver: String = ("Experiment", "Correct")._1
 
+    // Read Data
     val DF_block: Array[DataFrame] = ReadData.read_split_data(sqlContext,
       data_flg = data,
       pertition = pertition
     )
-    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext)
-
     DF_block.foreach(b => b.cache())
+
+    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext)
     ALL_DF.cache()
     ALL_DF.createOrReplaceTempView("all")
 
-    var sql_time: Int = System.currentTimeMillis().toInt
-    var sample_df = execute_all_subset_query("all")
 
-    sample_df = sample_df.
+    // Make data cube (Dataframe)
+    val sample_df = execute_all_subset_query("all").
       withColumn("sum_upper", $"sum" + sum_interval('count, 'variance)).
       withColumn("sum_lower", $"sum" - sum_interval('count, 'variance)).
       withColumn("avg_upper", $"avg" + avg_interval('count, 'variance)).
       withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
 
-    sample_df.show()
+    val Forall_df = execute_all("all").
+      withColumn("all_sum_upper", $"all_sum" + sum_interval('all_count, 'all_variance)).
+      withColumn("all_sum_lower", $"all_sum" - sum_interval('all_count, 'all_variance)).
+      withColumn("all_avg_upper", $"all_avg" + avg_interval('all_count, 'all_variance)).
+      withColumn("all_avg_lower", $"all_avg" - avg_interval('all_count, 'all_variance))
 
-    sql_time = System.currentTimeMillis().toInt - sql_time
-
-    println("sql time : %s" format sql_time / 1000)
-
+    // Execute Applications
     Application.gof(
+      sqlContext,
       k,
       agg_func,
       z_p,
-      ALL_DF.agg(y -> "count", y -> "avg", y -> "sum", y -> "var_samp"),
-      sample_df
+      sample_df.drop("sum", "avg", "count", "variance").
+        join(
+          Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
+          Seq(x)
+        )
     )
 
+    // 実験用コード
     /*
     for (roop_iterator <- k_list) { // データサイズ(size_list) or 探索件数のパラメータ変更(k_list)
 
@@ -263,7 +269,7 @@ object udafApp {
 
   private def execute_all(table: String): DataFrame = {
     sqlContext.sql(
-      "SELECT %s, count(*), sum(%s)/count(*), variance(%s) FROM %s GROUP BY %s" format(x, y, y, table, x)
+      "SELECT %s, count(*) as all_count, avg(%s) as all_avg, sum(%s) as all_sum, variance(%s) as all_variance FROM %s GROUP BY %s" format(x, y, y, y, table, x)
     )
   }
 
