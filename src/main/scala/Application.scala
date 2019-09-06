@@ -42,24 +42,35 @@ object Application {
     4. 足切りの部分データのkey情報のList化
     5. 返り値の設定
     ------------------------------*/
-  def gof(sqlContext: SQLContext, k: Int, agg_func: String, z_p: Double, gof_df: DataFrame): List[String] = {
+  def gof(sqlContext: SQLContext, k: Int, agg_func: String, z_p: Double, gof_df: DataFrame, subset: String): List[List[(String, (Double, Double))]] = {
     import sqlContext.implicits._
     // step. 1
     // step. 2
     var dev_df: DataFrame = gof_df.
       withColumn("dev_upper", calc_dev('avg_upper, 'avg_lower, 'all_avg_upper, 'all_avg_lower)(0)).
-      withColumn("dev_lower", calc_dev('avg_upper, 'avg_lower, 'all_avg_upper, 'all_avg_lower)(1)).orderBy($"dev_upper".desc)
-    dev_df.show()
-
+      withColumn("dev_lower", calc_dev('avg_upper, 'avg_lower, 'all_avg_upper, 'all_avg_lower)(1))
+    dev_df = dev_df.groupBy(subset).agg("dev_upper" -> "sum", "dev_lower" -> "sum").orderBy($"sum(dev_upper)".desc)
     // step. 3
-    val under_threshold: Double = 0.0
+    val under_threshold: Double = dev_df.head(k).last(2).toString.toDouble
     // step. 4
+    val not_pruning_list: List[(String, (Double, Double))] =
+      dev_df.filter($"sum(dev_upper)" > under_threshold).select(subset, "sum(dev_upper)", "sum(dev_lower)").
+        rdd.map(r => (r(0).toString, (r(1).toString.toDouble, r(2).toString.toDouble))).collect().toList
 
-    // step. 5
-    return List[String]()
+    val pruning_list: List[(String, (Double, Double))] =
+      dev_df.filter($"sum(dev_upper)" <= under_threshold).select(subset, "sum(dev_upper)", "sum(dev_lower)").
+        rdd.map(r => (r(0).toString, (r(1).toString.toDouble, r(2).toString.toDouble))).collect().toList
+
+    // step. 5 List[(String,(Double,Double))]
+    return List(
+      not_pruning_list,
+      pruning_list
+    )
   }
 
-  // udf
+  /* ------------------------------
+    udf
+   ------------------------------ */
   val calc_dev = udf { (u: String, l: String, all_u: String, all_l: String) =>
     val zero_flg = (u.toDouble - all_l.toDouble) * (l.toDouble - all_u.toDouble)
 
@@ -75,13 +86,17 @@ object Application {
 
 
   /* LOF for dataframe ----------
-  1. 全体平均の計算
-  2. 部分データ毎の乖離度を計算
+  1. k近傍との距離の計算
+  2. Lrd の計算・LOF の計算
   3. 閾値の計算
   4. 足切りの部分データのkey情報のList化
   5. 返り値の設定
   ------------------------------*/
-  def lof() = {
+  def lof(sqlContext: SQLContext, k: Int, agg_func: String, subset: String, df: DataFrame): List[List[(String, (Double, Double))]] = {
+    // step. 1
+    df.show()
 
+
+    return List[List[(String, (Double, Double))]]()
   }
 }

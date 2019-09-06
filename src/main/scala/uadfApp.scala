@@ -1,6 +1,5 @@
 package udafApp
 
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.{SparkConf, SparkContext}
@@ -107,10 +106,10 @@ object udafApp {
       * app = 2 : LOF(Local Outlier Factor
       * app = 3 : seedb
       * app = 4 : 回帰分析 (Regression Anaysis)
-      * app = 5 : 天文台データ
 
     <データ種類>
       data 変数で制御
+      * data = 0 : 天文台データ
       * data = 1 : Flight Delay Data
       * data = 2 : Port and Commodity Data
       * data = 3 : Border Crossing Data
@@ -149,7 +148,8 @@ object udafApp {
       withColumn("all_avg_lower", $"all_avg" - avg_interval('all_count, 'all_variance))
 
     // Execute Applications
-    Application.gof(
+    /*
+    val res_gof = Application.gof(
       sqlContext,
       k,
       agg_func,
@@ -158,7 +158,20 @@ object udafApp {
         join(
           Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
           Seq(x)
-        )
+        ),
+      s
+    )
+    println(res_gof.head)
+    println(res_gof.tail)
+    */
+
+    // LOF
+    Application.lof(
+      sqlContext,
+      k,
+      agg_func,
+      s,
+      sample_df.drop("sum", "avg", "count", "variance")
     )
 
     // 実験用コード
@@ -189,34 +202,20 @@ object udafApp {
     sc.stop
   }
 
-  // udf
+  /* -------------
+    udf
+   ------------- */
   private def make_sum_interval = (c: String, v: String) => {
     math.sqrt(c.toDouble * z_p * v.toDouble)
   }
 
-  val sum_interval = udf(make_sum_interval)
+  private val sum_interval = udf(make_sum_interval)
 
   private def make_avg_interval = (c: String, v: String) => {
     math.sqrt(z_p * v.toDouble / c.toDouble)
   }
 
-  val avg_interval = udf(make_avg_interval)
-
-
-  // dataframe to map
-  private def summarizeAsMap(df: DataFrame): RDD[(String, Map[String, Long])] = {
-    /*
-      df[col1, col2, col3] ->
-     */
-    // RDD[((String, String), Long)] のデータ構造にreduceする
-    val firstReduce = df.rdd.map(row => row.getString(0) -> row.getString(1) -> row.getLong(2)).reduceByKey(_ + _)
-    // uidをkey, Mapをvalueとするreduce, reduceされたデータ構造 RDD[(String, Map(String, Long))]
-    val mapRdd = firstReduce.map(e => e._1._1 -> Map(e._1._2 -> e._2)).reduceByKey(_ ++ _)
-
-    val hmap = mapRdd.collectAsMap()
-
-    mapRdd
-  }
+  private val avg_interval = udf(make_avg_interval)
 
   // output
   private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
@@ -255,6 +254,9 @@ object udafApp {
     }
   }
 
+  /* -------------
+    SQL statement and Execution Part
+   ------------- */
   private def execute_udaf(table: String): DataFrame = {
     sqlContext.sql(
       "SELECT Engine(%s, %s, %s) from %s" format(s, x, y, table)
@@ -281,7 +283,7 @@ object udafApp {
 
   private def execute_subset_query(table: String, where: String): DataFrame = {
     sqlContext.sql(
-      "SELECT %s, count(*), sum(%s)/count(*), variance(%s) FROM %s WHERE %s = \"%s\" GROUP BY %s" format(x, y, y, table, s, where, x)
+      "SELECT %s, count(*) as count, avg(%s) as avg, sum(%s) as sum, variance(%s) as variance FROM %s WHERE %s = \"%s\" GROUP BY %s" format(x, y, y, y, table, s, where, x)
     )
   }
 
