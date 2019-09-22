@@ -109,6 +109,9 @@ object LOF {
       "h" -> Map("12" -> Seq[Double](0.01, 0.01), "1" -> Seq[Double](0.04, 0.04), "2" -> Seq[Double](0.10, 0.10), "3" -> Seq[Double](0.234, 0.234), "4" -> Seq[Double](0.294, 0.294), "5" -> Seq[Double](0.3333, 0.3333)),
       "i" -> Map("12" -> Seq[Double](0, 0), "1" -> Seq[Double](0.03, 0.03), "2" -> Seq[Double](0.10, 0.10), "3" -> Seq[Double](0.233, 0.233), "4" -> Seq[Double](0.300, 0.300), "5" -> Seq[Double](0.3184, 0.3184))
     )
+
+
+
     toy_data
   }
 

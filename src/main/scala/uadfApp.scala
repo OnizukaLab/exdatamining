@@ -3,6 +3,8 @@ package udafApp
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.{SparkConf, SparkContext}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object udafApp {
   /*------------------------------
@@ -129,14 +131,14 @@ object udafApp {
       withColumn("all_avg_lower", $"all_avg" - avg_interval('all_count, 'all_variance))
 
     // 実験計測用 TODO:Cheak
-    k = (1, 5, 10, 15, 20, 25, 30, 316)._1
+    k = (1, 5, 10, 15, 20, 25, 30, 316)._3
     datasize = (1, 2, 4, 6, 8, 10)._1
     // 実験用パラメータの初期化
     initparameter()
     /*-------------
       手法選択
     --------------*/
-    /*
+
     method match {
       case "SharePruning" =>
         SharePruning(sqlContext, app, data, ALL_DF, Forall_df)
@@ -153,24 +155,8 @@ object udafApp {
       結果の出力
      ------------- */
     res_output(app, data, method, output_ver)
-    */
-
-    // LOF
-
-    Application.lof(
-      sqlContext,
-      k,
-      x,
-      agg_func,
-      s,
-      execute_all_subset_query("all")
-      .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
-      .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
-      .drop("sum", "avg", "count", "variance")
-    )
 
     sc.stop
-
   }
 
   /* -------------
@@ -227,6 +213,11 @@ object udafApp {
   /* -------------
     SQL statement and Execution Part
    ------------- */
+  private def hci_plot(table: String): DataFrame ={
+    val x = sqlContext.sql( "SELECT object_id, forced_rcmodel_mag FROM %s" format (table) ).withColumn("x")
+    val y = sqlContext.sql( "SELECT object_id, forced_rcmodel_mag_err FROM %s" format (table))
+  }
+
   // 全体平均の作成（for gof）
   private def execute_all(table: String): DataFrame = {
     sqlContext.sql(
@@ -287,30 +278,51 @@ object udafApp {
           .withColumn("avg", 'sum / 'count)
       }
 
-      val res_gof = Application.gof(
-        sqlContext,
-        k,
-        agg_func,
-        z_p,
-        cube_df
-          .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
-          .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
-          .select(s, x, "avg_upper", "avg_lower").
-          join(
-            Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
-            Seq(x)
-          ),
-        s
-      )
-      result_gof = res_gof.head.take(k)
+      var res_gof = List[List[(String, (Double, Double))]]()
+      var res_lof = List[List[(String, (Double, Double))]]()
 
-      pruning_subset_key = (pruning_subset_key ::: res_gof.last.map(f => f._1)).distinct
+      val future_gof = Future {
+        res_gof = Application.gof(
+          sqlContext,
+          k,
+          agg_func,
+          z_p,
+          cube_df
+            .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
+            .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
+            .select(s, x, "avg_upper", "avg_lower").
+            join(
+              Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
+              Seq(x)
+            ),
+          s
+        )
+      }
+      val future_lof = Future {
+        res_lof = Application.lof(
+          sqlContext,
+          k,
+          x,
+          agg_func,
+          s,
+          execute_all_subset_query("all")
+            .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
+            .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
+        )
+      }
+
+      val ff = future_gof.zip(future_lof)
+      while (!ff.isCompleted) {}
+      result_gof = res_gof.head.take(k)
+      result_lof = res_lof.head.take(k)
+
+      pruning_subset_key = (pruning_subset_key ::: res_gof(1).map(f => f._1).intersect(res_lof(1).map(f => f._1))).distinct
       pruning_rates = pruning_rates :+ pruning_subset_key.length * 100 / sub_num.toDouble
       pruning_num = pruning_num :+ pruning_subset_key.length
+
       cube_df = cube_df.filter(!$"OriginCityName".isin(pruning_subset_key: _*)) //TODO: 部分データの属性名の指定
     }
 
-    //result_lof = LOF.naive_executer(k, interval.-("All").toMap).head
     all_time = System.currentTimeMillis().toInt - start
   }
 
@@ -339,7 +351,53 @@ object udafApp {
       s
     ).head.take(k)
 
-    //result_lof = LOF.naive_executer(k, interval.-("All").toMap).head
+    result_lof = Application.lof(
+      sqlContext,
+      k,
+      x,
+      agg_func,
+      s,
+      execute_all_subset_query("all")
+        .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
+        .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
+    ).head
+
+    var res_gof = List[List[(String, (Double, Double))]]()
+    var res_lof = List[List[(String, (Double, Double))]]()
+
+    val future_gof = Future {
+      res_gof = Application.gof(
+        sqlContext,
+        k,
+        agg_func,
+        z_p,
+        sample_df.drop("sum", "avg", "count", "variance").
+          join(
+            Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
+            Seq(x)
+          ),
+        s
+      )
+    }
+    val future_lof = Future {
+      res_lof = Application.lof(
+        sqlContext,
+        k,
+        x,
+        agg_func,
+        s,
+        execute_all_subset_query("all")
+          .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
+          .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
+      )
+    }
+
+    val ff = future_gof.zip(future_lof)
+    while (!ff.isCompleted) {}
+    result_gof = res_gof.head.take(k)
+    result_lof = res_lof.head.take(k)
+
+
     all_time = System.currentTimeMillis().toInt - start
   }
 

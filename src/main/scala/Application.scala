@@ -1,7 +1,7 @@
 package udafApp
 
 import org.apache.spark.sql.functions.udf
-import org.apache.spark.sql.{DataFrame, SQLContext, Row}
+import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 
 import scala.math.{abs, _}
 
@@ -69,10 +69,11 @@ object Application {
   }
 
   /* LOF for dataframe ----------
-  1. k近傍との距離の計算
-  2. Lrd の計算・LOF の計算
-  3. 閾値の計算
-  4. 足切りの部分データのkey情報のList化
+  0. 部分データ間・次元毎の距離計算
+  1. 部分データ間の距離計算
+  2. 近傍探索
+  3. Lrd の計算
+  4. LOF の計算
   5. 返り値の設定
   ------------------------------*/
   def lof(sqlContext: SQLContext, k: Int, x: String, agg_func: String, subset: String, df: DataFrame): List[List[(String, (Double, Double))]] = {
@@ -83,36 +84,54 @@ object Application {
       .withColumnRenamed("count", "n_count").withColumnRenamed("sum", "n_sum")
       .withColumnRenamed("avg", "n_avg").withColumnRenamed("variance", "n_variance")
       .withColumnRenamed("avg_upper", "n_avg_upper").withColumnRenamed("avg_lower", "n_avg_lower").toDF()
-    val dist_df: DataFrame = df.join(mirror, Seq(x)).where(df(subset) =!= mirror("s"))
-      .withColumn("dist_upper", calc_dev('avg_upper, 'avg_lower, 'n_avg_upper, 'n_avg_lower)(0))
-      .withColumn("dist_lower", calc_dev('avg_upper, 'avg_lower, 'n_avg_upper, 'n_avg_lower)(1))
-      .groupBy(subset, "s").agg("dist_upper" -> "sum", "dist_lower" -> "sum").orderBy($"sum(dist_lower)")
 
-    dist_df.show()
+    val dist_df = df.join(mirror, Seq(x)).where(df(subset) =!= mirror("s"))
+      .withColumn("dist_upper", calc_dev('avg, 'avg, 'n_avg, 'n_avg)(0))
+      .withColumn("dist_lower", calc_dev('avg, 'avg, 'n_avg, 'n_avg)(1))
+      .withColumn("pow(dist_upper)", 'dist_upper * 'dist_upper)
+      .withColumn("pow(dist_lower)", 'dist_lower * 'dist_lower)
+      .groupBy(subset, "s").agg("pow(dist_upper)" -> "sum", "pow(dist_lower)" -> "sum").orderBy($"sum(pow(dist_lower))")
 
-    val a = dist_df.rdd.map{ case Row(p1: String, p2: String, upper: Double, lower: Double) =>
-      p1 -> ( p2 -> (upper, lower) )
+    val dist_map = dist_df.rdd.map { case Row(p1: String, p2: String, upper: Double, lower: Double) =>
+      p1 -> (p2 -> (upper, lower))
     }.groupByKey.mapValues(_.toMap).collectAsMap()
 
-    println( a("Rapid City.SD").values.toList.sorted.apply(n-1) ) // 閾値
-    println( a("Rapid City.SD").filter( f => f._2._1 <= a("Rapid City.SD").values.toList.sorted.apply(n-1)._1 ) ) // k近傍？
     // step. 2
+    val nearlest_map = dist_map.map { case (key, map) =>
+      val threthold = map.values.toList.sorted.apply(n - 1)._1
+      key -> map.filter(f => f._2._1 <= threthold)
+    }
 
+    // step. 3
+    val lrd_map = nearlest_map.map { case (key, map) =>
+      val a = map.values.toList.unzip match {
+        case (upp, low) =>
+          (upp.length / upp.sum, low.length / low.sum)
+      }
+      key -> (map.keys, a)
+    }
 
-    return List[List[(String, (Double, Double))]]()
+    // step. 4
+    val lof_sort_list = lrd_map.map { case (key, map) =>
+      var avg_lrd_upper = 0.0
+      var avg_lrd_lower = 0.0
+      map._1.foreach { s =>
+        avg_lrd_upper += lrd_map(s)._2._1
+        avg_lrd_lower += lrd_map(s)._2._2
+      }
+      key -> (avg_lrd_upper / map._1.toList.length / map._2._2, avg_lrd_lower / map._1.toList.length / map._2._1)
+    }.toList.sortBy(_._2).reverse
+
+    // step. 5
+    List[List[(String, (Double, Double))]](
+      lof_sort_list.slice(0, k),
+      lof_sort_list.slice(k, lof_sort_list.size)
+    )
   }
 
   /* ------------------------------
     udf
    ------------------------------ */
-  def dftomap(df: DataFrame) {
-    val firstReduce = df.rdd.map(row => row.getString(0) -> row.getString(1) -> row.getLong(2) -> row.getLong(3) ).reduceByKey(_ + _)
-    println(firstReduce)
-    val mapRdd = firstReduce.map{
-      e => e._1._1 -> Map(e._1._2 -> (e._2, e._2))}.reduceByKey(_++_)
-
-  }
-
   def isNull(v: String): Double = Option(v) match {
     case Some(x) => v.toString.toDouble
     case None =>
@@ -133,6 +152,21 @@ object Application {
         case _ => 0.0
       } //乖離度の下限
     )
+  }
+
+
+  /* ------------------------------
+    実行テスト用
+   ------------------------------ */
+  def sample_data(sqlContext: SQLContext): DataFrame = {
+    sqlContext.read.format("csv").option("header", "true").load("./src/data/test/sample_lof.csv")
+  }
+
+  def test_lof(sqlContext: SQLContext, k: Int, agg_func: String): Unit = {
+    val df = sample_data(sqlContext).withColumnRenamed("True", "subset").withColumnRenamed("y", "avg")
+
+    val ans = lof(sqlContext, 4, "x", agg_func, "subset", df)
+    println(ans.head)
   }
 
 }
