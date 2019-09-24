@@ -42,7 +42,7 @@ object Application {
     4. 足切りの部分データのkey情報のList化
     5. 返り値の設定
     ------------------------------*/
-  def gof(sqlContext: SQLContext, k: Int, agg_func: String, z_p: Double, gof_df: DataFrame, subset: String): List[List[(String, (Double, Double))]] = {
+  def gof(sqlContext: SQLContext, k: Int, agg_func: String, z_p: Double, subset: String, gof_df: DataFrame): List[List[(String, (Double, Double))]] = {
     import sqlContext.implicits._
     // step. 1
     // step. 2
@@ -80,17 +80,18 @@ object Application {
     val n: Int = 10 //LOF 計算の近傍数
     import sqlContext.implicits._
     // step. 1
-    val mirror = df.withColumnRenamed(subset, "s")
-      .withColumnRenamed("count", "n_count").withColumnRenamed("sum", "n_sum")
-      .withColumnRenamed("avg", "n_avg").withColumnRenamed("variance", "n_variance")
-      .withColumnRenamed("avg_upper", "n_avg_upper").withColumnRenamed("avg_lower", "n_avg_lower").toDF()
+    val mirror = df.withColumnRenamed(subset, "s").
+      withColumnRenamed("value", "n_value").
+      withColumnRenamed("avg", "n_value").
+      withColumnRenamed("avg_upper", "n_avg_upper").
+      withColumnRenamed("avg_lower", "n_avg_lower").toDF()
 
-    val dist_df = df.join(mirror, Seq(x)).where(df(subset) =!= mirror("s"))
-      .withColumn("dist_upper", calc_dev('avg, 'avg, 'n_avg, 'n_avg)(0))
-      .withColumn("dist_lower", calc_dev('avg, 'avg, 'n_avg, 'n_avg)(1))
-      .withColumn("pow(dist_upper)", 'dist_upper * 'dist_upper)
-      .withColumn("pow(dist_lower)", 'dist_lower * 'dist_lower)
-      .groupBy(subset, "s").agg("pow(dist_upper)" -> "sum", "pow(dist_lower)" -> "sum").orderBy($"sum(pow(dist_lower))")
+    val dist_df = df.withColumnRenamed("avg", "value").join(mirror, Seq(x)).where(df(subset) =!= mirror("s")).
+      withColumn("dist_upper", calc_dev('value, 'value, 'n_value, 'n_value)(0)).
+      withColumn("dist_lower", calc_dev('value, 'value, 'n_value, 'n_value)(1)).
+      withColumn("pow(dist_upper)", 'dist_upper * 'dist_upper).
+      withColumn("pow(dist_lower)", 'dist_lower * 'dist_lower).
+      groupBy(subset, "s").agg("pow(dist_upper)" -> "sum", "pow(dist_lower)" -> "sum").orderBy($"sum(pow(dist_lower))")
 
     val dist_map = dist_df.rdd.map { case Row(p1: String, p2: String, upper: Double, lower: Double) =>
       p1 -> (p2 -> (upper, lower))
@@ -139,21 +140,23 @@ object Application {
       0.0
   }
 
-  val calc_dev = udf { (u: String, l: String, all_u: String, all_l: String) =>
+  val calc_dev = udf { (u: String, l: String, uu: String, ll: String) =>
     val u1 = isNull(u)
     val l1 = isNull(l)
-    val zero_flg = (u1.toDouble - all_l.toDouble) * (l1.toDouble - all_u.toDouble)
+    val u2 = isNull(uu)
+    val l2 = isNull(ll)
+
+    val zero_flg = (u1.toDouble - l2.toDouble) * (l1.toDouble - u2.toDouble)
 
     Array(
-      List(abs(u1.toDouble - all_l.toDouble), abs(l1.toDouble - all_u.toDouble), 0.0).max, //乖離度の上限
+      List(abs(u1.toDouble - l2.toDouble), abs(l1.toDouble - u2.toDouble), 0.0).max, //乖離度の上限
       zero_flg match {
         case z if z <= 0 => 0.0
-        case z if z > 0 => List(abs(u1.toDouble - all_u.toDouble), abs(l1.toDouble - all_l.toDouble), abs(u1.toDouble - all_l.toDouble), abs(l1.toDouble - all_u.toDouble)).min
+        case z if z > 0 => List(abs(u1.toDouble - u2.toDouble), abs(l1.toDouble - l2.toDouble), abs(u1.toDouble - l2.toDouble), abs(l1.toDouble - u2.toDouble)).min
         case _ => 0.0
       } //乖離度の下限
     )
   }
-
 
   /* ------------------------------
     実行テスト用

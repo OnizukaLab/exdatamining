@@ -21,25 +21,29 @@ object ReadData {
   /*----------
     関数
    ----------*/
-  def read_all_data(sqlContext: SQLContext): DataFrame = {
-    read_parquet_flight(sqlContext)
+  def read_all_data(sqlContext: SQLContext, data: Int): DataFrame = {
+    data match {
+      case 0 => pdr1_all(sqlContext)
+      case 1 => read_parquet_flight(sqlContext)
+      case _ => ???
+    }
   }
 
   def read_block_data(sqlContext: SQLContext, i: Int, data: Int): DataFrame = {
     data match {
-      case 0 =>
+      case 0 => pdr1_all(sqlContext)
       case 1 => read_block_flight(sqlContext, i)
     }
     sqlContext.read.
       format("parquet").
-      load("./src/data/f_2_%s/" format i)
+      load("../data/f_2_%s/" format i)
   }
 
   // 天文台データ
-  def pdr1(sqlContext: SQLContext, i: Int): DataFrame = {
-    sqlContext.read.format("parquet").load(
-      "hdfs:///user/matsumoto/joined"
-    )
+  def pdr1_all(sqlContext: SQLContext): DataFrame = {
+    sqlContext.read.format("parquet")
+      .load("hdfs:///user/matsumoto/joined").sample(0.0001)
+      //.load("./src/data/pdr1_sample")
   }
 
   //------------------------------------------------------------------------------------------------------------------------
@@ -50,14 +54,14 @@ object ReadData {
   def read_block_flight(sqlContext: SQLContext, i: Int): DataFrame = {
     sqlContext.read.
       format("parquet").
-      load("./src/data/f_2_%s/" format i)
+      load("../data/f_2_%s/" format i)
   }
 
   def read_parquet_flight(sqlContext: SQLContext): DataFrame = {
     sqlContext.read.
       format("parquet")
-      //.load("./src/data/flights/")
-      .load("hdfs:///user/matsumoto/flight/all/")
+      .load("./src/data/flights/")
+      //.load("hdfs:///user/matsumoto/flight/all/")
   }
 
   /*--------------------

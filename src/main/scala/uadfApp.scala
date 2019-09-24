@@ -3,6 +3,7 @@ package udafApp
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.{SparkConf, SparkContext}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -10,7 +11,7 @@ object udafApp {
   /*------------------------------
     SparkContext インスタンスの生成
    ------------------------------*/
-  val conf = new SparkConf().setAppName("EDAEngine").setMaster("local[*]")
+  val conf = new SparkConf().setAppName("EDAEngine")
   val sc = new SparkContext(conf)
   val sqlContext = new SQLContext(sc)
 
@@ -90,78 +91,65 @@ object udafApp {
     start = System.currentTimeMillis().toInt
   }
 
+  /*---------------------------------------------------------------------------------
+  <手法>
+    method 変数で制御
+    * 提案手法　　　　　:　SharePruning()
+    * クエリ共有化のみ　:　Share()
+    * 枝刈りのみ　　　　:　Pruning()
+    * ベースライン　　　:　BaseLine()
+
+  <Application>
+    app 変数で制御
+    * app = 1 : Global Outlier Factor
+    * app = 2 : LOF(Local Outlier Factor
+    * app = 3 : seedb ?
+    * app = 4 : 回帰分析 (Regression Anaysis)
+
+  <データ種類>
+    data 変数で制御
+    * data = 0 : 天文台データ
+    * data = 1 : Flight Delay Data
+  --------------------------------------------------------------------------------- */
   def main(args: Array[String]) {
-    /*---------------------------------------------------------------------------------
-    <手法>
-      method 変数で制御
-      1. 提案手法　　　　　:　SharePruning()
-      2. クエリ共有化のみ　:　Share()
-      3. 枝刈りのみ　　　　:　Pruning()
-      4. ベースライン　　　:　BaseLine()
-
-    <Application>
-      app 変数で制御
-      * app = 1 : Global Outlier Factor
-      * app = 2 : LOF(Local Outlier Factor
-      * app = 3 : seedb
-      * app = 4 : 回帰分析 (Regression Anaysis)
-
-    <データ種類>
-      data 変数で制御
-      * data = 0 : 天文台データ
-      * data = 1 : Flight Delay Data
-      * data = 2 : Port and Commodity Data
-      * data = 3 : Border Crossing Data
-    --------------------------------------------------------------------------------- */
-    /*-------------
-      TODO: 実験条件の設定 
-    --------------*/
     val app: Int = 2
-    val data: Int = 1
+    val data: Int = 0
     val method: String = ("Baseline", "Share", "Pruning", "SharePruning")._2
     val output_ver: String = ("Experiment", "Correct")._1
 
-    // Read Data
-    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext)
-    ALL_DF.createOrReplaceTempView("all")
-
-    // Make all data result (Dataframe)
-    val Forall_df = execute_all("all").
-      withColumn("all_avg_upper", $"all_avg" + avg_interval('all_count, 'all_variance)).
-      withColumn("all_avg_lower", $"all_avg" - avg_interval('all_count, 'all_variance))
-
-    // 実験計測用 TODO:Cheak
-    k = (1, 5, 10, 15, 20, 25, 30, 316)._3
-    datasize = (1, 2, 4, 6, 8, 10)._1
-    // 実験用パラメータの初期化
-    initparameter()
-    /*-------------
-      手法選択
-    --------------*/
-
-    method match {
-      case "SharePruning" =>
-        SharePruning(sqlContext, app, data, ALL_DF, Forall_df)
-      case "Share" =>
-        Share(sqlContext, app, data, ALL_DF, Forall_df)
-      case "Pruning" =>
-        Pruning(sqlContext, app, data, Forall_df)
-      case "Baseline" =>
-        BaseLine(sqlContext, app, data, Forall_df)
-      case _ =>
-        println("- Missing Select Method -")
+    data match {
+      case 0 => astro_analysis(sqlContext, data, method)
+      case 1 => data_analysis(sqlContext, data, app, method)
     }
-    /* -------------
-      結果の出力
-     ------------- */
-    res_output(app, data, method, output_ver)
 
+    res_output(app, data, method, output_ver) // 結果の出力
     sc.stop
+  }
+
+  /* -------------
+      天文台データ用
+     ------------- */
+  def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
+    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, data)
+    ALL_DF.createOrReplaceTempView("astro")
+
+    // 選択した属性を1つの次元として計算可能なDFの作成
+    val df = hci_plot("astro")
+
+    var res_lof = List[List[(String, (Double, Double))]]()
+    res_lof = Application.lof(sqlContext, k, "x", agg_func, "object_id", df)
+    result_lof = res_lof.head.take(k)
+    println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+    println(res_lof)
+    println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+    all_time = System.currentTimeMillis().toInt - start
   }
 
   /* -------------
     udf
    ------------- */
+  var set_col = udf { (colum: Long) => 0 }
+
   private def make_sum_interval = (c: String, v: String) => {
     math.sqrt(c.toDouble * z_p * v.toDouble)
   }
@@ -174,7 +162,9 @@ object udafApp {
 
   private val avg_interval = udf(make_avg_interval)
 
-  // output
+  /* -------------
+    output
+   ------------- */
   private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
     output_ver match {
       case "Experiment" =>
@@ -213,9 +203,17 @@ object udafApp {
   /* -------------
     SQL statement and Execution Part
    ------------- */
-  private def hci_plot(table: String): DataFrame ={
-    val x = sqlContext.sql( "SELECT object_id, forced_rcmodel_mag FROM %s" format (table) ).withColumn("x")
-    val y = sqlContext.sql( "SELECT object_id, forced_rcmodel_mag_err FROM %s" format (table))
+  private def hci_plot(table: String): DataFrame = {
+    val target_axis_1 = "forced_rcmodel_mag" //"forced_rcmodel_mag" "photoz_mean"
+    val target_axis_2 = "forced_rcmodel_mag_err" //"forced_rcmodel_mag_err" "photoz_std_mean"
+
+    var num_for_setcol: Int = 0
+    val df1 = sqlContext.sql("SELECT object_id, %s as value FROM %s" format(target_axis_1, table)).withColumn("x", set_col('object_id))
+
+    num_for_setcol += 1
+    val df2 = sqlContext.sql("SELECT object_id, %s as value FROM %s" format(target_axis_2, table)).withColumn("x", set_col('object_id) + num_for_setcol)
+
+    df1.union(df2)
   }
 
   // 全体平均の作成（for gof）
@@ -243,13 +241,12 @@ object udafApp {
   private def get_subset(table: String, where: String): Array[String] = {
     sqlContext.sql(
       "SELECT %s FROM %s GROUP BY %s" format(where, table, where)
-    ).collect.map {
-      _ (0).toString
-    }
+    ).collect.map(_ (0).toString)
+
   }
 
   /* ---------------------------------------------------------------------------------
-    提案手法（クエリ共有化 & 枝刈り）
+    クエリ共有化 & 枝刈り
    --------------------------------------------------------------------------------- */
   def SharePruning(sqlContext: SQLContext, app: Int, data: Int, all_df: DataFrame, Forall_df: DataFrame): Unit = {
     var cube_df: DataFrame = sqlContext.emptyDataFrame
@@ -283,10 +280,7 @@ object udafApp {
 
       val future_gof = Future {
         res_gof = Application.gof(
-          sqlContext,
-          k,
-          agg_func,
-          z_p,
+          sqlContext, k, agg_func, z_p, s,
           cube_df
             .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
             .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
@@ -294,17 +288,12 @@ object udafApp {
             join(
               Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
               Seq(x)
-            ),
-          s
+            )
         )
       }
       val future_lof = Future {
         res_lof = Application.lof(
-          sqlContext,
-          k,
-          x,
-          agg_func,
-          s,
+          sqlContext, k, x, agg_func, s,
           execute_all_subset_query("all")
             .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
             .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
@@ -338,54 +327,22 @@ object udafApp {
       withColumn("avg_upper", $"avg" + avg_interval('count, 'variance)).
       withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
 
-    result_gof = Application.gof(
-      sqlContext,
-      k,
-      agg_func,
-      z_p,
-      sample_df.drop("sum", "avg", "count", "variance").
-        join(
-          Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
-          Seq(x)
-        ),
-      s
-    ).head.take(k)
-
-    result_lof = Application.lof(
-      sqlContext,
-      k,
-      x,
-      agg_func,
-      s,
-      execute_all_subset_query("all")
-        .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
-        .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
-    ).head
-
     var res_gof = List[List[(String, (Double, Double))]]()
     var res_lof = List[List[(String, (Double, Double))]]()
 
     val future_gof = Future {
       res_gof = Application.gof(
-        sqlContext,
-        k,
-        agg_func,
-        z_p,
+        sqlContext, k, agg_func, z_p, s,
         sample_df.drop("sum", "avg", "count", "variance").
           join(
             Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
             Seq(x)
-          ),
-        s
+          )
       )
     }
     val future_lof = Future {
       res_lof = Application.lof(
-        sqlContext,
-        k,
-        x,
-        agg_func,
-        s,
+        sqlContext, k, x, agg_func, s,
         execute_all_subset_query("all")
           .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
           .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
@@ -400,6 +357,10 @@ object udafApp {
 
     all_time = System.currentTimeMillis().toInt - start
   }
+
+  //------------------------------------------------------------------------------------------------------------------------
+  //------------------------------------------------------------------------------------------------------------------------
+  //------------------------------------------------------------------------------------------------------------------------
 
   /* --------------------------------------------------------------------------------------------------------------------
     枝刈りのみ行う手法
@@ -435,10 +396,7 @@ object udafApp {
         .withColumn("avg", 'sum / 'count)
 
       val res_gof = Application.gof(
-        sqlContext,
-        k,
-        agg_func,
-        z_p,
+        sqlContext, k, agg_func, z_p, s,
         cube_df
           .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
           .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
@@ -446,15 +404,14 @@ object udafApp {
           join(
             Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
             Seq(x)
-          ),
-        s
+          )
       )
       result_gof = res_gof.head.take(k)
 
       pruning_subset_key = (pruning_subset_key ::: res_gof.last.map(f => f._1)).distinct
       pruning_rates = pruning_rates :+ pruning_subset_key.length * 100 / sub_num.toDouble
       pruning_num = pruning_num :+ pruning_subset_key.length
-      cube_df = cube_df.filter(!$"OriginCityName".isin(pruning_subset_key: _*)) //TODO: 部分データの属性名の指定
+      cube_df = cube_df.filter(!$"OriginCityName".isin(pruning_subset_key: _*))
     }
 
     //result_lof = LOF.naive_executer(k, interval.-("All").toMap).head
@@ -464,8 +421,6 @@ object udafApp {
 
   /* --------------------------------------------------------------------------------------------------------------------
     効率化なしの手法
-    1. 部分データ総数を取得
-    2. 部分データ毎に sql を実行
    -------------------------------------------------------------------------------------------------------------------- */
   def BaseLine(sqlContext: SQLContext, app: Int, data: Int, Forall_df: DataFrame): Unit = {
     // step. 部分データの総数を取得
@@ -489,19 +444,50 @@ object udafApp {
       withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
 
     result_gof = Application.gof(
-      sqlContext,
-      k,
-      agg_func,
-      z_p,
+      sqlContext, k, agg_func, z_p, s,
       df.drop("sum", "avg", "count", "variance").
         join(
           Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
           Seq(x)
-        ),
-      s
+        )
     ).head.take(k)
 
     all_time = System.currentTimeMillis().toInt - start
+  }
+
+  /* -------------
+    Flight data 用の実行関数
+   ------------- */
+  def data_analysis(sqlContext: SQLContext, data: Int, app: Int, method: String): Unit = {
+    // Read Data
+    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, data)
+    ALL_DF.createOrReplaceTempView("all")
+
+    // Make all data result (Dataframe)
+    val Forall_df = execute_all("all").
+      withColumn("all_avg_upper", $"all_avg" + avg_interval('all_count, 'all_variance)).
+      withColumn("all_avg_lower", $"all_avg" - avg_interval('all_count, 'all_variance))
+
+    k = (1, 5, 10, 15, 20, 25, 30, 316)._3
+    datasize = (1, 2, 4, 6, 8, 10)._1
+    initparameter() // 実験用パラメータの初期化
+
+    /*-------------
+      手法選択
+    --------------*/
+    method match {
+      case "SharePruning" =>
+        SharePruning(sqlContext, app, data, ALL_DF, Forall_df)
+      case "Share" =>
+        Share(sqlContext, app, data, ALL_DF, Forall_df)
+      case "Pruning" =>
+        Pruning(sqlContext, app, data, Forall_df)
+      case "Baseline" =>
+        BaseLine(sqlContext, app, data, Forall_df)
+      case _ =>
+        println("- Missing Select Method -")
+    }
+
   }
 
 }
