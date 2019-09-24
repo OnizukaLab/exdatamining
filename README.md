@@ -1,28 +1,41 @@
 # exdatamining
-## 実行環境
-* spark2
-* Data Location : hdfs:///user/matsumoto/joined/
+
+## コンパイル方法
+* udaf/src/main/scala/*.scala を実行したい内容に書き換える
+* build.sbt が存在するディレクトリ（udaf/build.sbt）にて `sbt package` を実行
 
 ## 実行方法
-1. spark2-submit 
--- 以下、対応したアプリケーション等のインストールが必要
-2. sbt run (build.sbt が存在するディレクトリにて)
-3. IntelliJ での RUN (local 環境にて)
+```
+spark2-submit \
+--master yarn \
+--deploy-mode client \
+--properties-file spark-defaults-32-hist.conf \
+target/scala-2.11/udafapp_2.11-1.0.jar \
+[引数]
+```
+
+## コマンドライン引数
+1. hoge
+2. hoge
 
 ## ファイル構成
+- Data Location : `hdfs:///user/matsumoto/joined/`
 - src
     - main
-        - python : データ加工に使用した jupyter
         - scala : 
 	- sql : pdr1 に関するサンプルの sql コード
-    - recources
-        - （各種データ名のフォルダ）
-        - tmp
-            - all.csv 
 - results
     - （各種データ名のフォルダ）
 - build.sbt : scala コードのビルド時の設定ファイル
 
+---
+
+## 例
+1. hci 初期データに対する異常検知
+
+2. 各種フィルタの計測値を次元とした際の異常検知
+
+---
 ## 使用しているパラメータ
 ### データファイル
 > src/main/scala/ReadData.scala
@@ -49,6 +62,3 @@
 * l.118 ~ 121 : データの選択，手法の選択
 * l.126, 128 : 繰り返しのパラメータ，同じ設定での計測回数
 * l.233, 359 : フィルタに使用する部分データの属性名
-
-### 例
-1. 
