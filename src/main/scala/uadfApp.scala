@@ -16,7 +16,6 @@ object udafApp {
   val sqlContext = new SQLContext(sc)
 
   import sqlContext.implicits._
-
   /*-----------------------------------------
     実験で使用するパラメータの設定
       * sub_num : 部分データの総数
@@ -28,17 +27,40 @@ object udafApp {
   val sub_num: Int = 316 //TODO: 総部分データ数
   var k: Int = 316 //TODO: 探索件数の設定
   var datasize: Int = 1
-  var pertition: Int = 2
+  val pertition: Int = 2
   val rates: Array[Double] = Array.fill(pertition)(1.0 / pertition)
   val z_p: Double = 1.96 * 1.96
 
   /* -----------------------------------------
     TODO: Set Query's Parameter 
    -----------------------------------------*/
-  val s: String = "OriginCityName"
-  val x: String = "Quarter"
-  val y: String = "DepDelay"
-  val agg_func: String = "AVG"
+  var s: String = "OriginCityName"
+  var x: String = "Quarter"
+  var y: String = "DepDelay"
+  var agg_func: String = "AVG"
+  var data_file: String = ""
+  var target_col: Array[String] = Array[String]("Quarter", "DeqDelay")
+
+  /* -------------
+   コマンドライン引数の処理
+  ------------- */
+  private def cla(args: Array[String]): Unit = {
+    args.foreach{ e =>
+      e.split("=")(0) match {
+        case "subset" => s = e.split("=")(1)
+        case "data_file" => data_file = e.split("=")(1)
+        case "k" => k = e.split("=")(1).toInt
+        case "target_column" =>
+          e.split("=")(1).split(",").foreach{ c =>
+            target_col = target_col :+ c
+          }
+        case "x" => x = e.split("=")(1)
+        case "y" => y = e.split("=")(1)
+        case "agg_func" => agg_func = e.split("=")(1)
+        case _ => println("error: command line arguments faults")
+      }
+    }
+  }
 
   /*------------------------------
     パラメータの設定・初期化
@@ -80,7 +102,6 @@ object udafApp {
     saa = List.empty[List[String]]
     pruning_rates = List.empty[Double]
     pruning_num = List.empty[Int]
-    pertition *= datasize
 
     udaf_time = 0
     map_merge_time = 0
@@ -117,18 +138,23 @@ object udafApp {
     val method: String = ("Baseline", "Share", "Pruning", "SharePruning")._2
     val output_ver: String = ("Experiment", "Correct")._1
 
+    /*
     data match {
       case 0 => astro_analysis(sqlContext, data, method)
       case 1 => data_analysis(sqlContext, data, app, method)
     }
 
     res_output(app, data, method, output_ver) // 結果の出力
+     */
+
+    args.foreach(println)
+
     sc.stop
   }
 
   /* -------------
-      天文台データ用
-     ------------- */
+     天文台データ用
+    ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
     val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, data)
     ALL_DF.createOrReplaceTempView("astro")
