@@ -1,7 +1,7 @@
 package udafApp
 
 import org.apache.spark.sql.functions.udf
-import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+import org.apache.spark.sql.{DataFrame, SQLContext}
 
 import scala.math.{abs, _}
 
@@ -76,10 +76,42 @@ object Application {
   4. LOF の計算
   5. 返り値の設定
   ------------------------------*/
-  def lof(sqlContext: SQLContext, k: Int, x: String, agg_func: String, subset: String, df: DataFrame): List[List[(String, (Double, Double))]] = {
+  def lof(sqlContext: SQLContext, k: Int, target_col: Array[String], agg_func: String, subset: String, df: DataFrame): List[List[(String, Double)]] = {
     val n: Int = 10 //LOF 計算の近傍数
-    import sqlContext.implicits._
     // step. 1
+    df.createOrReplaceTempView("dist")
+    import org.apache.spark.sql.Row
+    import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+    sqlContext.udf.register("gm", new CalcuDistance)
+
+    val dist_map = sqlContext.sql(
+      """
+        SELECT a.%s, gm( a.%s, a.%s, b.%s, b.%s, b.%s ) as distmap
+        FROM dist as a, dist as b
+        WHERE a.%s != b.%s
+        GROUP BY a.%s
+      """ format(
+        subset, target_col(0), target_col(1), subset, target_col(0), target_col(1), subset, subset, subset
+      )
+    ).rdd.map { case Row(f, v: GenericRowWithSchema) =>
+      f.toString -> (v.getList[String](0), v.getDouble(1))
+    }.collectAsMap()
+
+    val lof_map = dist_map.map{ case(k, v) =>
+      var n_lrd = 0.0
+      v._1.toArray.foreach( n_p =>
+        n_lrd += dist_map(n_p.toString)._2 / v._1.toArray.length
+      )
+
+      k -> n_lrd / v._2
+    }.toList.sortBy(-_._2)
+
+    List(
+      lof_map.slice(0,k),
+      lof_map.slice(k, lof_map.size)
+    )
+
+    /*
     val mirror = df.withColumnRenamed(subset, "s").
       withColumnRenamed("value", "n_value").
       withColumnRenamed("avg", "n_value").
@@ -128,6 +160,7 @@ object Application {
       lof_sort_list.slice(0, k),
       lof_sort_list.slice(k, lof_sort_list.size)
     )
+    */
   }
 
   /* ------------------------------
@@ -168,7 +201,7 @@ object Application {
   def test_lof(sqlContext: SQLContext, k: Int, agg_func: String): Unit = {
     val df = sample_data(sqlContext).withColumnRenamed("True", "subset").withColumnRenamed("y", "avg")
 
-    val ans = lof(sqlContext, 4, "x", agg_func, "subset", df)
+    val ans = lof(sqlContext, 4, Array[String]("x", "y"), agg_func, "subset", df)
     println(ans.head)
   }
 

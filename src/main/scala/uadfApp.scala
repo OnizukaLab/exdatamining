@@ -11,11 +11,12 @@ object udafApp {
   /*------------------------------
     SparkContext インスタンスの生成
    ------------------------------*/
-  val conf = new SparkConf().setAppName("EDAEngine")
+  val conf = new SparkConf().setAppName("EDAEngine")//.setMaster("local[*]")
   val sc = new SparkContext(conf)
   val sqlContext = new SQLContext(sc)
 
   import sqlContext.implicits._
+
   /*-----------------------------------------
     実験で使用するパラメータの設定
       * sub_num : 部分データの総数
@@ -34,24 +35,26 @@ object udafApp {
   /* -----------------------------------------
     TODO: Set Query's Parameter 
    -----------------------------------------*/
-  var s: String = "OriginCityName"
+  var s: String = "subset"
   var x: String = "Quarter"
   var y: String = "DepDelay"
   var agg_func: String = "AVG"
-  var data_file: String = ""
-  var target_col: Array[String] = Array[String]("Quarter", "DeqDelay")
+  var data_file: String = "../data/test/sample_lof.csv"
+  var data_format: String = "csv"
+  var target_col: Array[String] = Array[String]("x", "y")
 
   /* -------------
    コマンドライン引数の処理
   ------------- */
   private def cla(args: Array[String]): Unit = {
-    args.foreach{ e =>
+    args.foreach { e =>
       e.split("=")(0) match {
         case "subset" => s = e.split("=")(1)
         case "data_file" => data_file = e.split("=")(1)
+        case "data_format" => data_format = e.split("=")(1)
         case "k" => k = e.split("=")(1).toInt
         case "target_column" =>
-          e.split("=")(1).split(",").foreach{ c =>
+          e.split("=")(1).split(",").foreach { c =>
             target_col = target_col :+ c
           }
         case "x" => x = e.split("=")(1)
@@ -67,7 +70,7 @@ object udafApp {
    ------------------------------*/
   var block_num: Int = 0
   var result_gof: List[(String, (Double, Double))] = List.empty[(String, (Double, Double))]
-  var result_lof: List[(String, (Double, Double))] = List.empty[(String, (Double, Double))]
+  var result_lof: List[(String, Double)] = List.empty[(String, Double)]
   var subset_key: List[String] = List.empty[String]
   var pruning_subset_key: List[String] = List.empty[String]
   val part_cube = scala.collection.mutable.HashMap.empty[String, Map[String, Seq[Double]]]
@@ -95,7 +98,7 @@ object udafApp {
   private def initparameter(): Unit = {
     block_num = 0
     result_gof = List.empty[(String, (Double, Double))]
-    result_lof = List.empty[(String, (Double, Double))]
+    result_lof = List.empty[(String, Double)]
     subset_key = List.empty[String]
     pruning_subset_key = List.empty[String]
     part_cube.clear()
@@ -137,17 +140,15 @@ object udafApp {
     val data: Int = 0
     val method: String = ("Baseline", "Share", "Pruning", "SharePruning")._2
     val output_ver: String = ("Experiment", "Correct")._1
+    cla(args)
 
-    /*
     data match {
       case 0 => astro_analysis(sqlContext, data, method)
       case 1 => data_analysis(sqlContext, data, app, method)
     }
 
     res_output(app, data, method, output_ver) // 結果の出力
-     */
 
-    args.foreach(println)
 
     sc.stop
   }
@@ -156,14 +157,14 @@ object udafApp {
      天文台データ用
     ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
-    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, data)
+    val ALL_DF: DataFrame = sqlContext.read.format("parquet").load(data_file)
     ALL_DF.createOrReplaceTempView("astro")
 
     // 選択した属性を1つの次元として計算可能なDFの作成
     val df = hci_plot("astro")
 
-    var res_lof = List[List[(String, (Double, Double))]]()
-    res_lof = Application.lof(sqlContext, k, "x", agg_func, "object_id", df)
+    var res_lof = List[List[(String, Double)]]()
+    res_lof = Application.lof(sqlContext, k, target_col, agg_func, "object_id", df)
     result_lof = res_lof.head.take(k)
     println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
     println(res_lof)
@@ -174,8 +175,6 @@ object udafApp {
   /* -------------
     udf
    ------------- */
-  var set_col = udf { (colum: Long) => 0 }
-
   private def make_sum_interval = (c: String, v: String) => {
     math.sqrt(c.toDouble * z_p * v.toDouble)
   }
@@ -230,16 +229,9 @@ object udafApp {
     SQL statement and Execution Part
    ------------- */
   private def hci_plot(table: String): DataFrame = {
-    val target_axis_1 = "forced_rcmodel_mag" //"forced_rcmodel_mag" "photoz_mean"
-    val target_axis_2 = "forced_rcmodel_mag_err" //"forced_rcmodel_mag_err" "photoz_std_mean"
+    target_col = Array("forced_rcmodel_mag", "forced_rcmodel_mag_err")
 
-    var num_for_setcol: Int = 0
-    val df1 = sqlContext.sql("SELECT object_id, %s as value FROM %s" format(target_axis_1, table)).withColumn("x", set_col('object_id))
-
-    num_for_setcol += 1
-    val df2 = sqlContext.sql("SELECT object_id, %s as value FROM %s" format(target_axis_2, table)).withColumn("x", set_col('object_id) + num_for_setcol)
-
-    df1.union(df2)
+    sqlContext.sql("SELECT object_id, %s, %s FROM %s" format(target_col(0), target_col(1), table))
   }
 
   // 全体平均の作成（for gof）
@@ -302,7 +294,7 @@ object udafApp {
       }
 
       var res_gof = List[List[(String, (Double, Double))]]()
-      var res_lof = List[List[(String, (Double, Double))]]()
+      var res_lof = List[List[(String, Double)]]()
 
       val future_gof = Future {
         res_gof = Application.gof(
@@ -319,7 +311,7 @@ object udafApp {
       }
       val future_lof = Future {
         res_lof = Application.lof(
-          sqlContext, k, x, agg_func, s,
+          sqlContext, k, target_col, agg_func, s,
           execute_all_subset_query("all")
             .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
             .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
@@ -354,7 +346,7 @@ object udafApp {
       withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
 
     var res_gof = List[List[(String, (Double, Double))]]()
-    var res_lof = List[List[(String, (Double, Double))]]()
+    var res_lof = List[List[(String, Double)]]()
 
     val future_gof = Future {
       res_gof = Application.gof(
@@ -368,7 +360,7 @@ object udafApp {
     }
     val future_lof = Future {
       res_lof = Application.lof(
-        sqlContext, k, x, agg_func, s,
+        sqlContext, k, target_col, agg_func, s,
         execute_all_subset_query("all")
           .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
           .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
@@ -486,7 +478,7 @@ object udafApp {
    ------------- */
   def data_analysis(sqlContext: SQLContext, data: Int, app: Int, method: String): Unit = {
     // Read Data
-    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, data)
+    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, data, data_file)
     ALL_DF.createOrReplaceTempView("all")
 
     // Make all data result (Dataframe)

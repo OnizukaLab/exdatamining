@@ -21,7 +21,7 @@ object ReadData {
   /*----------
     関数
    ----------*/
-  def read_all_data(sqlContext: SQLContext, data: Int): DataFrame = {
+  def read_all_data(sqlContext: SQLContext, data: Int, data_file: String): DataFrame = {
     data match {
       case 0 => pdr1_all(sqlContext)
       case 1 => read_parquet_flight(sqlContext)
