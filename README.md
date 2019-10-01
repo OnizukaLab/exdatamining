@@ -1,5 +1,10 @@
 # exdatamining
 
+## 実行環境設定
+* spark2
+* sbt 
+* yarn 
+
 ## コンパイル方法
 * udaf/src/main/scala/*.scala を実行したい内容に書き換える
 * build.sbt が存在するディレクトリ（udaf/build.sbt）にて `sbt package` を実行
@@ -42,9 +47,9 @@ spark2-submit \
 --properties-file spark-defaults-32-hist.conf \
 target/scala-2.11/udafapp_2.11-1.0.jar \
 subset=object_id \
-data_file=hdfs://user/matsumoto/joined \
+data_file=hdfs:///user/matsumoto/joined \
 data_format=parquet \
-target_column=forced_rcmodel_mag,forced_rcmodel_mag_err
+target_column=meas_rcmodel_mag,meas_rcmodel_mag_err
 ```
 
 2. 各種フィルタの計測値を次元とした際の異常検知
@@ -52,4 +57,5 @@ target_column=forced_rcmodel_mag,forced_rcmodel_mag_err
 ---
 ## 使用しているパラメータ
 > src/main/scala/uadfApp.scala
+
 クエリのパラメータ（l.38 ~ 44）を直接変更してコンパイル
