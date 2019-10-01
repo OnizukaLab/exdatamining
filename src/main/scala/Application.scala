@@ -88,18 +88,18 @@ object Application {
       """
         SELECT a.%s, gm( a.%s, a.%s, b.%s, b.%s, b.%s ) as distmap
         FROM dist as a, dist as b
-        WHERE a.%s != b.%s
+        WHERE a.%s != b.%s and a.%s is NOT NULL and b.%s is NOT NULL
         GROUP BY a.%s
       """ format(
-        subset, target_col(0), target_col(1), subset, target_col(0), target_col(1), subset, subset, subset
+        subset, target_col(0), target_col(1), subset, target_col(0), target_col(1), subset, subset, target_col(1), target_col(1), subset
       )
     ).rdd.map { case Row(f, v: GenericRowWithSchema) =>
       f.toString -> (v.getList[String](0), v.getDouble(1))
     }.collectAsMap()
 
-    val lof_map = dist_map.map{ case(k, v) =>
+    val lof_map = dist_map.map { case (k, v) =>
       var n_lrd = 0.0
-      v._1.toArray.foreach( n_p =>
+      v._1.toArray.foreach(n_p =>
         n_lrd += dist_map(n_p.toString)._2 / v._1.toArray.length
       )
 
@@ -107,7 +107,7 @@ object Application {
     }.toList.sortBy(-_._2)
 
     List(
-      lof_map.slice(0,k),
+      lof_map.slice(0, k),
       lof_map.slice(k, lof_map.size)
     )
 

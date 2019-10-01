@@ -164,14 +164,12 @@ class CalcuDistance extends UserDefinedAggregateFunction {
     buffer1.getMap(0)
   }
 
-
   // This is where you output the final value, given the final value of your bufferSchema.
   override def evaluate(buffer: Row): Any = {
     val t: Double = buffer.getMap[Long, Double](0).values.toArray.sortWith(_ < _).apply(9)
     val lrd = 10.0 / buffer.getMap[Long, Double](0).filter(f => f._2.toString.toDouble <= t).values.sum
-    val n_point: List[Long] = buffer.getMap[Long, Double](0).filter(f => f._2.toString.toDouble <= t).keys.toList
+    val n_point: Array[Long] = buffer.getMap[Long, Double](0).filter(f => f._2.toString.toDouble <= t).keys.toArray
 
     (n_point, lrd)
   }
-
 }

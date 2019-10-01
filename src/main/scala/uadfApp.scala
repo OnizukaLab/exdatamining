@@ -42,6 +42,8 @@ object udafApp {
   var data_file: String = "../data/test/sample_lof.csv"
   var data_format: String = "csv"
   var target_col: Array[String] = Array[String]("x", "y")
+  target_col = Array("meas_rcmodel_mag", "meas_rcmodel_mag_err")
+
 
   /* -------------
    コマンドライン引数の処理
@@ -157,8 +159,7 @@ object udafApp {
      天文台データ用
     ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
-    val ALL_DF: DataFrame = sqlContext.read.format("parquet").load(data_file)
-    ALL_DF.createOrReplaceTempView("astro")
+    sqlContext.read.format("parquet").load(data_file).filter($"meas_rcmodel_mag" < 24).createOrReplaceTempView("astro")
 
     // 選択した属性を1つの次元として計算可能なDFの作成
     val df = hci_plot("astro")
@@ -229,7 +230,6 @@ object udafApp {
     SQL statement and Execution Part
    ------------- */
   private def hci_plot(table: String): DataFrame = {
-    target_col = Array("forced_rcmodel_mag", "forced_rcmodel_mag_err")
 
     sqlContext.sql("SELECT object_id, %s, %s FROM %s" format(target_col(0), target_col(1), table))
   }
