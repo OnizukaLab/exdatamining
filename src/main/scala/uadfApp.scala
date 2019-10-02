@@ -41,9 +41,8 @@ object udafApp {
   var agg_func: String = "AVG"
   var data_file: String = "../data/test/sample_lof.csv"
   var data_format: String = "csv"
-  var target_col: Array[String] = Array[String]("x", "y")
-  target_col = Array("meas_rcmodel_mag", "meas_rcmodel_mag_err")
-
+  var target_col: Array[String] = Array("meas_rcmodel_mag", "meas_rcmodel_mag_err")
+  var sampling_rate: Double = 1.0
 
   /* -------------
    コマンドライン引数の処理
@@ -62,6 +61,7 @@ object udafApp {
         case "x" => x = e.split("=")(1)
         case "y" => y = e.split("=")(1)
         case "agg_func" => agg_func = e.split("=")(1)
+        case "sampling_rate" => sampling_rate = e.split("=")(1).toDouble
         case _ => println("error: command line arguments faults")
       }
     }
@@ -159,12 +159,9 @@ object udafApp {
      天文台データ用
     ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
-    sqlContext.read.format("parquet").load(data_file).filter($"meas_rcmodel_mag" < 24).sample(0.001).createOrReplaceTempView("astro")
-
-    // 選択した属性を1つの次元として計算可能なDFの作成
+    sqlContext.read.format("parquet").load(data_file).filter($"meas_rcmodel_mag" < 24).sample(sampling_rate).createOrReplaceTempView("astro")
     val df = hci_plot("astro")
-
-    var res_lof = List[List[(String, Double)]](
+    var res_lof = List[List[(String, Double)]]()
     res_lof = Application.lof(sqlContext, k, target_col, agg_func, "object_id", df)
     result_lof = res_lof.head.take(k)
     println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
