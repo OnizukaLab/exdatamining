@@ -159,12 +159,12 @@ object udafApp {
      天文台データ用
     ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
-    sqlContext.read.format("parquet").load(data_file).filter($"meas_rcmodel_mag" < 24).createOrReplaceTempView("astro")
+    sqlContext.read.format("parquet").load(data_file).filter($"meas_rcmodel_mag" < 24).sample(0.001).createOrReplaceTempView("astro")
 
     // 選択した属性を1つの次元として計算可能なDFの作成
     val df = hci_plot("astro")
 
-    var res_lof = List[List[(String, Double)]]()
+    var res_lof = List[List[(String, Double)]](
     res_lof = Application.lof(sqlContext, k, target_col, agg_func, "object_id", df)
     result_lof = res_lof.head.take(k)
     println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
