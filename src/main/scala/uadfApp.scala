@@ -11,7 +11,8 @@ object udafApp {
   /*------------------------------
     SparkContext インスタンスの生成
    ------------------------------*/
-  val conf = new SparkConf().setAppName("EDAEngine")//.setMaster("local[*]")
+  val conf = new SparkConf().setAppName("EDAEngine")
+  //.setMaster("local[*]")
   val sc = new SparkContext(conf)
   val sqlContext = new SQLContext(sc)
 
@@ -25,8 +26,8 @@ object udafApp {
       * per     : データ分割数
       * rates   : データ分割の粒度(分割率)
    -----------------------------------------*/
-  val sub_num: Int = 316 //TODO: 総部分データ数
-  var k: Int = 316 //TODO: 探索件数の設定
+  val sub_num: Int = 316
+  var k: Int = 10
   var datasize: Int = 1
   val pertition: Int = 2
   val rates: Array[Double] = Array.fill(pertition)(1.0 / pertition)
@@ -35,7 +36,7 @@ object udafApp {
   /* -----------------------------------------
     TODO: Set Query's Parameter 
    -----------------------------------------*/
-  var s: String = "subset"
+  var s: String = "object_id"
   var x: String = "Quarter"
   var y: String = "DepDelay"
   var agg_func: String = "AVG"
@@ -55,6 +56,7 @@ object udafApp {
         case "data_format" => data_format = e.split("=")(1)
         case "k" => k = e.split("=")(1).toInt
         case "target_column" =>
+          target_col = Array.empty[String]
           e.split("=")(1).split(",").foreach { c =>
             target_col = target_col :+ c
           }
@@ -144,6 +146,7 @@ object udafApp {
     val output_ver: String = ("Experiment", "Correct")._1
     cla(args)
 
+
     data match {
       case 0 => astro_analysis(sqlContext, data, method)
       case 1 => data_analysis(sqlContext, data, app, method)
@@ -159,14 +162,22 @@ object udafApp {
      天文台データ用
     ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
-    sqlContext.read.format("parquet").load(data_file).filter($"meas_rcmodel_mag" < 24).sample(sampling_rate).createOrReplaceTempView("astro")
+    sqlContext.read.format(data_format).load(data_file).
+      filter($"meas_rcmodel_mag" < 24).sample(sampling_rate).
+      createOrReplaceTempView("astro")
+
     val df = hci_plot("astro")
+
     var res_lof = List[List[(String, Double)]]()
-    res_lof = Application.lof(sqlContext, k, target_col, agg_func, "object_id", df)
+
+    res_lof = Application.lof(sqlContext, k, target_col, agg_func, s, df)
+
     result_lof = res_lof.head.take(k)
-    println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-    println(res_lof)
-    println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+
+    //visualize.visualize_2d(sqlContext, df, result_lof, target_col)
+    val outlier_df = df.withColumn("OutlierFlg", 'object_id.isin(result_lof.map { case (k, lof) => k }: _*))
+    outlier_df.write.option("header", "true").csv("./ResLOF.ccsv")
+
     all_time = System.currentTimeMillis().toInt - start
   }
 
@@ -228,7 +239,7 @@ object udafApp {
    ------------- */
   private def hci_plot(table: String): DataFrame = {
 
-    sqlContext.sql("SELECT object_id, %s, %s FROM %s" format(target_col(0), target_col(1), table))
+    sqlContext.sql("SELECT %s, %s, %s FROM %s" format(s, target_col(0), target_col(1), table))
   }
 
   // 全体平均の作成（for gof）

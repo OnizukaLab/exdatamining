@@ -8,6 +8,8 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % "2.4.3",
   "org.apache.spark" %% "spark-sql" % "2.4.3",
   "org.apache.spark" %% "spark-hive" % "2.2.0"
+  //, "com.quantifind" %% "wisp" % "0.0.4"
+  //, "com.itextpdf" % "itextpdf" % "5.5.6"
 )
 
 // psql を接続する際に必要
