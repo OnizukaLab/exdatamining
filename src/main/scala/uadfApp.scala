@@ -11,8 +11,7 @@ object udafApp {
   /*------------------------------
     SparkContext インスタンスの生成
    ------------------------------*/
-  val conf = new SparkConf().setAppName("EDAEngine")
-  //.setMaster("local[*]")
+  val conf = new SparkConf().setAppName("EDAEngine").setMaster("local[*]")
   val sc = new SparkContext(conf)
   val sqlContext = new SQLContext(sc)
 
@@ -44,6 +43,7 @@ object udafApp {
   var data_format: String = "csv"
   var target_col: Array[String] = Array("meas_rcmodel_mag", "meas_rcmodel_mag_err")
   var sampling_rate: Double = 1.0
+  var output_file: String = "" //TODO: set default file
 
   /* -------------
    コマンドライン引数の処理
@@ -64,6 +64,7 @@ object udafApp {
         case "y" => y = e.split("=")(1)
         case "agg_func" => agg_func = e.split("=")(1)
         case "sampling_rate" => sampling_rate = e.split("=")(1).toDouble
+        case "output_file" => output_file = e.split("=")(1)
         case _ => println("error: command line arguments faults")
       }
     }
@@ -147,10 +148,13 @@ object udafApp {
     cla(args)
 
 
+    /*
     data match {
       case 0 => astro_analysis(sqlContext, data, method)
       case 1 => data_analysis(sqlContext, data, app, method)
     }
+    */
+    Application.test_lof(sqlContext, k= 10, agg_func)
 
     res_output(app, data, method, output_ver) // 結果の出力
 
@@ -163,7 +167,7 @@ object udafApp {
     ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
     sqlContext.read.format(data_format).load(data_file).
-      filter($"meas_rcmodel_mag" < 24).sample(sampling_rate).
+      //filter($"meas_rcmodel_mag" < 24).sample(sampling_rate).
       createOrReplaceTempView("astro")
 
     val df = hci_plot("astro")
@@ -176,7 +180,7 @@ object udafApp {
 
     //visualize.visualize_2d(sqlContext, df, result_lof, target_col)
     val outlier_df = df.withColumn("OutlierFlg", 'object_id.isin(result_lof.map { case (k, lof) => k }: _*))
-    outlier_df.write.option("header", "true").csv("./ResLOF.ccsv")
+    //outlier_df.write.option("header", "true").csv("./ResLOF.ccsv")
 
     all_time = System.currentTimeMillis().toInt - start
   }
@@ -228,7 +232,7 @@ object udafApp {
         println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
       case "Correct" =>
-        Evaluate.currect_results(app, result_gof) //TODO: GOFとLOF両方の正解データの出力に対応していない
+        Evaluate.currect_results(app, result_gof)
 
       case _ => ???
     }
@@ -238,7 +242,6 @@ object udafApp {
     SQL statement and Execution Part
    ------------- */
   private def hci_plot(table: String): DataFrame = {
-
     sqlContext.sql("SELECT %s, %s, %s FROM %s" format(s, target_col(0), target_col(1), table))
   }
 

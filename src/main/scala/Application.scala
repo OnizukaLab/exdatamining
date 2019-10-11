@@ -97,11 +97,15 @@ object Application {
       f.toString -> (v.getList[String](0), v.getDouble(1))
     }.collectAsMap()
 
+    println(dist_map)
+
+
     val lof_map = dist_map.map { case (k, v) =>
       var n_lrd = 0.0
       v._1.toArray.foreach(n_p =>
         n_lrd += dist_map(n_p.toString)._2 / v._1.toArray.length
       )
+      println(k, n_lrd, v._1.toArray.length)
 
       k -> n_lrd / v._2
     }.toList.sortBy(-_._2)
@@ -157,7 +161,7 @@ object Application {
 
     // step. 5
     List[List[(String, (Double, Double))]](
-      lof_sort_list.slice(0, k),
+      lof_sort_list.slice(0, k)
       lof_sort_list.slice(k, lof_sort_list.size)
     )
     */
@@ -195,14 +199,15 @@ object Application {
     実行テスト用
    ------------------------------ */
   def sample_data(sqlContext: SQLContext): DataFrame = {
-    sqlContext.read.format("csv").option("header", "true").load("./src/data/test/sample_lof.csv")
+    sqlContext.read.format("csv").option("header", "true").load("../data/test/sample_lof.csv")
   }
 
   def test_lof(sqlContext: SQLContext, k: Int, agg_func: String): Unit = {
-    val df = sample_data(sqlContext).withColumnRenamed("True", "subset").withColumnRenamed("y", "avg")
+    val df = sample_data(sqlContext)
 
-    val ans = lof(sqlContext, 4, Array[String]("x", "y"), agg_func, "subset", df)
+    val ans = lof(sqlContext, 10, Array[String]("x", "y"), agg_func, "object_id", df)
     println(ans.head)
+    println(ans.last)
   }
 
 }

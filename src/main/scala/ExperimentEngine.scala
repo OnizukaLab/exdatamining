@@ -113,6 +113,7 @@ class MergeVariance extends UserDefinedAggregateFunction {
   }
 }
 
+
 /*------------------------------
   udaf to calculate distance between two points
  ------------------------------*/
@@ -171,5 +172,59 @@ class CalcuDistance extends UserDefinedAggregateFunction {
     val n_point: Array[Long] = buffer.getMap[Long, Double](0).filter(f => f._2.toString.toDouble <= t).keys.toArray
 
     (n_point, lrd)
+  }
+}
+
+/*------------------------------
+  udaf to calculate distance between two points
+ ------------------------------*/
+class TestCalcuDistance extends UserDefinedAggregateFunction {
+  // This is the input fields for your aggregate function.
+  override def inputSchema: org.apache.spark.sql.types.StructType = StructType(
+    StructField("axis_1", DoubleType) ::
+      StructField("axis_2", DoubleType) ::
+      StructField("object_id", LongType) ::
+      StructField("target_axis_1", DoubleType) ::
+      StructField("target_axis_2", DoubleType) ::
+      Nil
+  )
+
+  // This is the internal fields you keep for computing your aggregate.
+  override def bufferSchema: StructType = StructType(
+    StructField(
+      "cube",
+      DataTypes.createMapType(LongType, DoubleType)
+    ) :: Nil
+  )
+
+  // This is the output type of your aggregatation function.
+  override def dataType: DataType = MapType(LongType, DoubleType)
+
+  //override def dataType: DataType = new StructType().add("nearlest_point", ArrayType(LongType)).add("lrd", DoubleType)
+
+  override def deterministic: Boolean = true
+
+  // This is the initial value for your buffer schema.
+  override def initialize(buffer: MutableAggregationBuffer): Unit = {
+    buffer(0) = Map.empty[Long, Array[Double]]
+  }
+
+  // This is how to update your buffer schema given an input.
+  override def update(buffer: MutableAggregationBuffer, input: Row): Unit = {
+    buffer(0) = buffer.getMap(0) ++ Map(
+      input.getLong(2) -> math.sqrt(
+        math.pow(input.getDouble(0) - input.getDouble(3), 2.0) + math.pow(input.getDouble(1) - input.getDouble(4), 2.0))
+    )
+  }
+
+  // This is how to merge two objects with the bufferSchema type.
+  override def merge(buffer1: MutableAggregationBuffer, buffer2: Row): Unit = {
+    buffer1(0) = buffer1.getMap(0) ++ buffer2.getMap(0)
+    buffer1.getMap(0)
+  }
+
+  // This is where you output the final value, given the final value of your bufferSchema.
+  override def evaluate(buffer: Row): Any = {
+    buffer.getMap[Long, Double](0)
   }
 }
