@@ -148,12 +148,12 @@ object udafApp {
     cla(args)
 
 
-    /*
+/*
     data match {
       case 0 => astro_analysis(sqlContext, data, method)
       case 1 => data_analysis(sqlContext, data, app, method)
     }
-    */
+*/
     Application.test_lof(sqlContext, k= 10, agg_func)
 
     res_output(app, data, method, output_ver) // 結果の出力
@@ -167,7 +167,7 @@ object udafApp {
     ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
     sqlContext.read.format(data_format).load(data_file).
-      //filter($"meas_rcmodel_mag" < 24).sample(sampling_rate).
+      filter($"meas_rcmodel_mag" < 24).sample(sampling_rate).
       createOrReplaceTempView("astro")
 
     val df = hci_plot("astro")
@@ -219,15 +219,15 @@ object udafApp {
             subset_key, pruning_rates
           )
         }
-        println(todf_time, udaf_time, map_merge_time, compute_time)
+        //println(todf_time, udaf_time, map_merge_time, compute_time)
         println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
         println("all_time : %s" format all_time)
         println("pruning_rates : %s" format pruning_rates)
         println("pruning_num : %s" format pruning_num)
         println("rap_time : %s" format rap_time)
         println("--------------")
-        println("gof_res: %s" format result_gof.map(_._1))
-        println("lof_res: %s" format result_lof.map(_._1))
+        println("gof_results: %s" format result_gof.map(_._1))
+        println("lof_results: %s" format result_lof.map(_._1))
         println("pruning_subset: %s" format pruning_subset_key)
         println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 

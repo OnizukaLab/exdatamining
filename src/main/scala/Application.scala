@@ -105,8 +105,6 @@ object Application {
       v._1.toArray.foreach(n_p =>
         n_lrd += dist_map(n_p.toString)._2 / v._1.toArray.length
       )
-      println(k, n_lrd, v._1.toArray.length)
-
       k -> n_lrd / v._2
     }.toList.sortBy(-_._2)
 
