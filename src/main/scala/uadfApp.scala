@@ -180,7 +180,7 @@ object udafApp {
 
     //visualize.visualize_2d(sqlContext, df, result_lof, target_col)
     val outlier_df = df.withColumn("OutlierFlg", 'object_id.isin(result_lof.map { case (k, lof) => k }: _*))
-    //outlier_df.write.option("header", "true").csv("./ResLOF.ccsv")
+    //outlier_df.write.option("header", "true").csv("./ResLOF.csv")
 
     all_time = System.currentTimeMillis().toInt - start
   }
@@ -203,6 +203,11 @@ object udafApp {
   /* -------------
     output
    ------------- */
+  private def outlier_output(app: Int, df: DataFrame): Unit ={
+    val outlier_df = df.withColumn("OutlierFlg", 'object_id.isin(result_lof.map { case (k, lof) => k }: _*))
+    outlier_df.write.option("header", "true").format("csv").save(output_file)
+  }
+
   private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
     output_ver match {
       case "Experiment" =>
