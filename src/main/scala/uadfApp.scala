@@ -205,7 +205,7 @@ object udafApp {
    ------------- */
   private def outlier_output(app: Int, df: DataFrame): Unit ={
     val outlier_df = df.withColumn("OutlierFlg", 'object_id.isin(result_lof.map { case (k, lof) => k }: _*))
-    outlier_df.write.option("header", "true").format("csv").save(output_file)
+    outlier_df.write.option("header", "true").format("csv").mode("overwrite").save(output_file)
   }
 
   private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
