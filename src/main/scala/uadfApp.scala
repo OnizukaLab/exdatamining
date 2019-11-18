@@ -39,7 +39,7 @@ object udafApp {
   var x: String = "Quarter"
   var y: String = "DepDelay"
   var agg_func: String = "AVG"
-  var data_file: String = "../data/test/sample_lof.csv"
+  var data_file: String = "hdfs:///user/matsumoto/joined"
   var data_format: String = "csv"
   var target_col: Array[String] = Array("meas_rcmodel_mag", "meas_rcmodel_mag_err")
   var sampling_rate: Double = 1.0
@@ -157,7 +157,6 @@ object udafApp {
     Application.test_lof(sqlContext, k= 10, agg_func)
 
     res_output(app, data, method, output_ver) // 結果の出力
-
 
     sc.stop
   }

@@ -97,9 +97,6 @@ object Application {
       f.toString -> (v.getList[String](0), v.getDouble(1))
     }.collectAsMap()
 
-    println(dist_map)
-
-
     val lof_map = dist_map.map { case (k, v) =>
       var n_lrd = 0.0
       v._1.toArray.foreach(n_p =>
@@ -206,6 +203,10 @@ object Application {
     val ans = lof(sqlContext, 10, Array[String]("x", "y"), agg_func, "object_id", df)
     println(ans.head)
     println(ans.last)
+
+    GridSearch.sample()
+
+    GridSearch.test(sqlContext, df)
   }
 
 }
