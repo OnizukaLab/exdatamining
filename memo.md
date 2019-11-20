@@ -90,3 +90,59 @@ Sincというのはcmodelとは別の測定方での測り方を意味してい�
 * 20 TB
 * 時系列データはまだ（？）10/8
 * 伊藤さんが作業している
+
+---
+# 時系列データ (基本的なファイルフォーマットは fits で csv を一部作成してもらっている)
+
+* 00814/HSC-Y/tract9813
+* 00815/HSC-Y/tract9813
+* 00817/HSC-Z/tract9813 -> csv 
+* 00823/HSC-G/tract9813
+* 00823/HSC-Y/tract9813
+* 01052/HSC-G/tract9813
+* 01052/HSC-Y/tract9813
+* 01111/HSC-Z/tract9813 -> csv
+* 01113/HSC-Y/tract9813
+* 01114/HSC-Z/tract9813 -> csv
+* 01115/HSC-G/tract9813 -> csv
+* 01122/HSC-Y/tract9813
+* 01170/HSC-Z/tract9813 -> csv
+* 01232/HSC-G/tract9813 -> csv
+* 01469/HSC-Y/tract9813
+* 01475/HSC-Z/tract9813
+* 01494/HSC-Y/tract9813
+* 01503/HSC-Y/tract9813
+* 01527/HSC-G/tract9813 -> csv
+* 01532/HSC-Z/tract9813
+* 01535/HSC-Y/tract9813
+* 01788/HSC-Y/tract9813
+* 01788/HSC-Z/tract9813
+* 01790/HSC-G/tract9813 -> csv
+* 01794/HSC-Z/tract9813
+* 01818/HSC-Z/tract9813
+* 01828/HSC-G/tract9813 -> csv
+* 01828/HSC-Z/tract9813
+* 01830/HSC-Y/tract9813
+* 01847/HSC-Z/tract9813
+* 01851/HSC-G/tract9813 -> csv
+* 01851/HSC-Y/tract9813
+* 01856/HSC-Z/tract9813
+* 01858/HSC-G/tract9813 -> csv
+* 01860/HSC-Y/tract9813
+* 01878/HSC-Z/tract9813
+* 01880/HSC-G/tract9813
+* 01884/HSC-Y/tract9813
+* 01889/HSC-Z/tract9813
+* 01890/HSC-G/tract9813
+* 01892/HSC-Y/tract9813
+* 01906/HSC-Y/tract9813
+* 01907/HSC-G/tract9813
+* 01907/HSC-Z/tract9813
+* 01914/HSC-G/tract9813
+* 01914/HSC-Z/tract9813
+* 01915/HSC-Y/tract9813
+* 01936/HSC-Y/tract9813
+* 01939/HSC-Z/tract9813
+* 01942/HSC-G/tract9813
+* 01945/HSC-Z/tract9813
+* 01997/HSC-Z/tract9813
