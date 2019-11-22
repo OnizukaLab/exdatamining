@@ -4,8 +4,8 @@ import org.apache.spark.sql.{DataFrame, SQLContext}
 
 object GridSearch {
 
-  def getMaxMinCoord(): Unit ={
-
+  def getMaxMinCoord(sqlContext: SQLContext, axis_str: String): Unit ={
+    sqlContext.sql("")
   }
 
   def makeGrid(): Unit ={
