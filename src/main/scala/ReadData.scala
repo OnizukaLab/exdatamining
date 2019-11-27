@@ -43,7 +43,15 @@ object ReadData {
   def pdr1_all(sqlContext: SQLContext): DataFrame = {
     sqlContext.read.format("parquet")
       .load("hdfs:///user/matsumoto/joined").sample(0.0001)
-      //.load("./src/data/pdr1_sample")
+    //.load("./src/data/pdr1_sample")
+  }
+
+  // 時系列データ
+  def TimeSeries(sqlContext: SQLContext, TimeList: Array[String] = Array("00817")): DataFrame = {
+    val hdfs_path = "hdfs:///user/furu/naoj/HSC/rerun/s18a_dud/"
+    TimeList.map { i =>
+      sqlContext.read.format("csv").option("header", "true").load(s"$hdfs_path$i/*/*/csv").withColumn("date_id", lit(i))
+    }.reduceLeft((a, b) => a.union(b))
   }
 
   //------------------------------------------------------------------------------------------------------------------------
@@ -61,7 +69,7 @@ object ReadData {
     sqlContext.read.
       format("parquet")
       .load("./src/data/flights/")
-      //.load("hdfs:///user/matsumoto/flight/all/")
+    //.load("hdfs:///user/matsumoto/flight/all/")
   }
 
   /*--------------------
