@@ -50,9 +50,11 @@ $ spark2-submit \
     グループ化属性毎にどの測定値を使用して，異常検知を実行するかを決定する変数 \
     （デフォルト：`meas_rcmodel_mag`, `meas_rcmodel_mag_err`）
 
-7. 分析する前処理となる条件設定：`` \
+7. 分析する前処理となる条件設定：`where_clause=???` \
     全データから分析に使用するデータを抽出する条件（sql の where 句に相当） \
     （default : `meas_rcmodel_mag<24`）
+
+    範囲指定の場合 : `???` = `meas_rcmodel_mag < 24 and meas_rcmodel_mag > 5`
 
 8. サンプル率：`sampling_rate=???` \
     入力データからサンプリングを行う際のシード数 (0.0~1.0) \

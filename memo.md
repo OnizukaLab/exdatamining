@@ -27,8 +27,12 @@
    * 時系列データはまだ（？）10/8
    * 伊藤さんが作業している
    * sv76 に展開 -> hadoop クラスタに存在しない
-5. 時系列 data
+5. 時系列 data \
+    HSC-G データ
     ```
+    sv076:/mnt/nfs/user/furu/pdr2_6.7a/HSC/rerun/s18a_dud/FORCEDSRC-HSC-G-tract9813_01115_01232_rev.csv
+
+    sv076:/mnt/nfs/user/furu/pdr2_6.7a/HSC/rerun/s18a_dud/FORCEDSRC-HSC-G-tract9813.head
     ```
 6. スキーマ情報 \
     `https://hsc-release.mtk.nao.ac.jp/schema/`
@@ -113,6 +117,7 @@ DB ⇄ 分析
 --- 
 
 ## 11/28 打ち合わせ　with 高田さん，古澤さん，+ 
-時系列データに関して
+時系列データに関して -> 作成中
 
-    data 作成中
+
+

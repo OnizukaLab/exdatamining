@@ -34,16 +34,19 @@ object ReadData {
       case 0 => pdr1_all(sqlContext)
       case 1 => read_block_flight(sqlContext, i)
     }
-    sqlContext.read.
-      format("parquet").
-      load("../data/f_2_%s/" format i)
+    sqlContext.read.format("parquet").load("../data/f_2_%s/" format i)
   }
 
-  // 天文台データ
-  def pdr1_all(sqlContext: SQLContext): DataFrame = {
-    sqlContext.read.format("parquet")
-      .load("hdfs:///user/matsumoto/joined").sample(0.0001)
-    //.load("./src/data/pdr1_sample")
+  // 天文台データ 
+  def read_astro(sqlContext:SQLContext, file_path: String, data_format: String, sample_rate: Double = 1.0, where_clause: String): DataFrame {
+    where_clause match {
+      case "" => sqlContext.read.option("header", "true").format(data_format).load(file_path).sample(sample_rate)
+      case _ =>  DFFilter(
+        sqlContext,
+        where_clause,
+        sqlContext.read.option("header", "true").format(data_format).load(file_path).sample(sample_rate)
+        )
+    }
   }
 
   // 時系列データ
@@ -54,8 +57,9 @@ object ReadData {
     }.reduceLeft((a, b) => a.union(b))
   }
 
-  def DFFilter(sQLContext: SQLContext, a: String, df: DataFrame): DataFrame ={
-
+  // データの前処理を必要としている場合に使用する関数
+  def DFFilter(sqlContext: SQLContext, where_clause: String, df: DataFrame): DataFrame ={
+    df.filter(filter_condition)
   }
 
   //------------------------------------------------------------------------------------------------------------------------

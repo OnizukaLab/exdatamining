@@ -43,6 +43,7 @@ object udafApp {
   var data_format: String = "csv"
   var target_col: Array[String] = Array("meas_rcmodel_mag", "meas_rcmodel_mag_err")
   var sampling_rate: Double = 1.0
+  var where_clause: String = "meas_rcmodel_mag < 24" 
   var output_file: String = "" //TODO: set default file
 
   /* -------------
@@ -65,6 +66,7 @@ object udafApp {
         case "agg_func" => agg_func = e.split("=")(1)
         case "sampling_rate" => sampling_rate = e.split("=")(1).toDouble
         case "output_file" => output_file = e.split("=")(1)
+        case "where_clause" => where_clause = e.split("=")(1)
         case _ => println("error: command line arguments faults")
       }
     }
@@ -139,6 +141,7 @@ object udafApp {
     data 変数で制御
     * data = 0 : 天文台データ
     * data = 1 : Flight Delay Data
+    * 
   --------------------------------------------------------------------------------- */
   def main(args: Array[String]) {
     val app: Int = 2
@@ -146,7 +149,6 @@ object udafApp {
     val method: String = ("Baseline", "Share", "Pruning", "SharePruning")._2
     val output_ver: String = ("Experiment", "Correct")._1
     cla(args)
-
 
 /*
     data match {
@@ -165,8 +167,7 @@ object udafApp {
      天文台データ用
     ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
-    sqlContext.read.format(data_format).load(data_file).
-      filter($"meas_rcmodel_mag" < 24).sample(sampling_rate).
+    ReadData.read_astro(sqlContext, data_file, data_format, sampling_rate, where_clause).
       createOrReplaceTempView("astro")
 
     val df = hci_plot("astro")
