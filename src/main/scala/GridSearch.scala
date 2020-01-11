@@ -29,6 +29,16 @@ object GridSearch {
     grid_array
   }
 
+  def IndexGrid(sqlContext: SQLContext, df: DataFrame, grid_array: Array[Array[Double]]): DataFrame ={
+    import sqlContext.implicits._
+    df.join(
+      df.rdd.map{ row => 
+        (row(0).toString, (1 until row.length).map{ i => grid_array(i-1).lastIndexWhere(n => row(i).toString.toDouble >= n) })
+      }.toDF("object_id", "grid_index"),
+      "object_id"
+    )
+  }
+
   def searchGridIndex(coord: Array[Double], grid_array: Array[Array[Double]]): Unit = {
     println(1)
   }
@@ -37,13 +47,16 @@ object GridSearch {
     //import sqlContext.implicits._
     val axis_list = List("x", "y")
 
-    val ax_maxmin_list = axis_list.map{ ax =>
-      getMaxMinCoord(sqlContext, df, ax)
-    }
-    println(ax_maxmin_list)
-    println(ax_maxmin_list(0))
+    val axis_range_list = makeGrid(
+      axis_list.map{ ax =>
+        getMaxMinCoord(sqlContext, df, ax)
+      }, 
+      axis_list
+    )
 
-    val axis_range_list = makeGrid(ax_maxmin_list, axis_list)
+    val grid_df = IndexGrid(sqlContext, df, axis_range_list)
+
+    
 
   }
 

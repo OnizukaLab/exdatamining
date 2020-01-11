@@ -1,11 +1,6 @@
 package udafApp
 
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.expressions.{MutableAggregationBuffer, UserDefinedAggregateFunction}
-import org.apache.spark.sql.types._
 
-
-/*------------------------------
   udaf to calculate sum of value
  ------------------------------*/
 class MergeValue extends UserDefinedAggregateFunction {

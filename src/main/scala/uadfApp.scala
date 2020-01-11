@@ -150,13 +150,13 @@ object udafApp {
     val output_ver: String = ("Experiment", "Correct")._1
     cla(args)
 
-/*
+
     data match {
       case 0 => astro_analysis(sqlContext, data, method)
       case 1 => data_analysis(sqlContext, data, app, method)
     }
-*/
-    Application.test_lof(sqlContext, k= 10, agg_func)
+
+    // Application.test_lof(sqlContext, k= 10, agg_func)
 
     res_output(app, data, method, output_ver) // 結果の出力
 
