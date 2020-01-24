@@ -318,8 +318,8 @@ object udafApp {
           cube_df
             .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
             .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
-            .select(s, x, "avg_upper", "avg_lower").
-            join(
+            .select(s, x, "avg_upper", "avg_lower")
+            .join(
               Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
               Seq(x)
             )
