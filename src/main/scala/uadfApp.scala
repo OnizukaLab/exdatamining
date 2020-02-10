@@ -145,8 +145,8 @@ object udafApp {
   --------------------------------------------------------------------------------- */
   def main(args: Array[String]) {
     val app: Int = 2
-    val data: Int = 0
-    val method: String = ("Baseline", "Share", "Pruning", "SharePruning")._2
+    val data: Int = 1
+    val method: String = ("Baseline", "Share", "Pruning", "SharePruning")._1
     val output_ver: String = ("Experiment", "Correct")._1
     cla(args)
 

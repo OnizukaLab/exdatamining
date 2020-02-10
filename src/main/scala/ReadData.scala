@@ -81,8 +81,8 @@ object ReadData {
   def read_parquet_flight(sqlContext: SQLContext): DataFrame = {
     sqlContext.read.
       format("parquet")
-      .load("./src/data/flights/")
-    //.load("hdfs:///user/matsumoto/flight/all/")
+      .load("hdfs:///user/matsumoto/flight/all/")
+      //.load("./src/data/flights/")
   }
 
   /*--------------------
