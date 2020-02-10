@@ -150,7 +150,6 @@ object udafApp {
     val output_ver: String = ("Experiment", "Correct")._1
     cla(args)
 
-
     data match {
       case 0 => astro_analysis(sqlContext, data, method)
       case 1 => data_analysis(sqlContext, data, app, method)
@@ -494,9 +493,10 @@ object udafApp {
    ------------- */
   def data_analysis(sqlContext: SQLContext, data: Int, app: Int, method: String): Unit = {
     // Read Data
-    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, data, data_file)
+    data_file = "hdfs:///user/matsumoto/flight/all/"
+    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, 1, data_file)
     ALL_DF.createOrReplaceTempView("all")
-
+    println(ALL_DF.printSchema())
     // Make all data result (Dataframe)
     val Forall_df = execute_all("all").
       withColumn("all_avg_upper", $"all_avg" + avg_interval('all_count, 'all_variance)).
