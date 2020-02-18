@@ -34,7 +34,6 @@ object ReadData {
       case 0 => pdr1_all(sqlContext)
       case 1 => read_block_flight(sqlContext, i)
     }
-    sqlContext.read.format("parquet").load("../data/f_2_%s/" format i)
   }
 
   def pdr1_all(sqlContext: SQLContext): DataFrame = {
@@ -75,14 +74,14 @@ object ReadData {
   def read_block_flight(sqlContext: SQLContext, i: Int): DataFrame = {
     sqlContext.read.
       format("parquet").
-      load("../data/f_2_%s/" format i)
+      load("./src/resources/flights/f_5_%s/" format i)
   }
 
   def read_parquet_flight(sqlContext: SQLContext): DataFrame = {
     sqlContext.read.
-      format("parquet")
-      .load("hdfs:///user/matsumoto/flight/all/")
-      //.load("./src/data/flights/")
+      format("parquet").load("./src/resources/flights/all/")
+      //.load("hdfs:///user/matsumoto/flight/all/")
+      //.load("./src/resources/flights/")
   }
 
   /*--------------------
