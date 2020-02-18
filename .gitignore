@@ -1,6 +1,6 @@
 # DS_Store
 .DS_Store
-*/DS_Store
+*/.DS_Store
 
 # scala 関連
 *.class
@@ -8,13 +8,15 @@
 *.log
 target
 metastore_db
+derby.log
+Test
 
 # データファイル
 */*/*.csv
 */*/*/*.csv
-src/*/*/*/*.html
-src/data
-src/resources
+*/*/*/*/*.html
+*/data
+*/resources
 
 # python 関連
 src/*/*/.ipynb_checkpoints

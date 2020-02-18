@@ -76,13 +76,16 @@ object Application {
   4. LOF の計算
   5. 返り値の設定
   ------------------------------*/
-  def lof(sqlContext: SQLContext, k: Int, target_col: Array[String], agg_func: String, subset: String, df: DataFrame): List[List[(String, Double)]] = {
+  def lof(sqlContext: SQLContext, k: Int, target_col: Array[String], agg_func: String, subset: String, df: DataFrame): List[List[(String, (Double, Double))]] = {
     val n: Int = 10 //LOF 計算の近傍数
     // step. 1
     df.createOrReplaceTempView("dist")
     import org.apache.spark.sql.Row
     import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+    import sqlContext.implicits._
     sqlContext.udf.register("gm", new CalcuDistance)
+
+    println("aaaaa")
 
     val dist_map = sqlContext.sql(
       """
@@ -90,7 +93,7 @@ object Application {
         FROM dist as a, dist as b
         WHERE a.%s != b.%s and a.%s is NOT NULL and b.%s is NOT NULL
         GROUP BY a.%s
-      """ format(
+      """.format(
         subset, target_col(0), target_col(1), subset, target_col(0), target_col(1), subset, subset, target_col(1), target_col(1), subset
       )
     ).rdd.map { case Row(f, v: GenericRowWithSchema) =>
@@ -102,65 +105,65 @@ object Application {
       v._1.toArray.foreach(n_p =>
         n_lrd += dist_map(n_p.toString)._2 / v._1.toArray.length
       )
-      k -> n_lrd / v._2
-    }.toList.sortBy(-_._2)
+      k -> (n_lrd / v._2, n_lrd / v._2)
+    }.toList.sortBy(-_._2._1)
 
     List(
       lof_map.slice(0, k),
       lof_map.slice(k, lof_map.size)
     )
-
-    /*
-    val mirror = df.withColumnRenamed(subset, "s").
-      withColumnRenamed("value", "n_value").
-      withColumnRenamed("avg", "n_value").
-      withColumnRenamed("avg_upper", "n_avg_upper").
-      withColumnRenamed("avg_lower", "n_avg_lower").toDF()
-
-    val dist_df = df.withColumnRenamed("avg", "value").join(mirror, Seq(x)).where(df(subset) =!= mirror("s")).
-      withColumn("dist_upper", calc_dev('value, 'value, 'n_value, 'n_value)(0)).
-      withColumn("dist_lower", calc_dev('value, 'value, 'n_value, 'n_value)(1)).
-      withColumn("pow(dist_upper)", 'dist_upper * 'dist_upper).
-      withColumn("pow(dist_lower)", 'dist_lower * 'dist_lower).
-      groupBy(subset, "s").agg("pow(dist_upper)" -> "sum", "pow(dist_lower)" -> "sum").orderBy($"sum(pow(dist_lower))")
-
-    val dist_map = dist_df.rdd.map { case Row(p1: String, p2: String, upper: Double, lower: Double) =>
-      p1 -> (p2 -> (upper, lower))
-    }.groupByKey.mapValues(_.toMap).collectAsMap()
-
-    // step. 2
-    val nearlest_map = dist_map.map { case (key, map) =>
-      val threthold = map.values.toList.sorted.apply(n - 1)._1
-      key -> map.filter(f => f._2._1 <= threthold)
-    }
-
-    // step. 3
-    val lrd_map = nearlest_map.map { case (key, map) =>
-      val a = map.values.toList.unzip match {
-        case (upp, low) =>
-          (upp.length / upp.sum, low.length / low.sum)
-      }
-      key -> (map.keys, a)
-    }
-
-    // step. 4
-    val lof_sort_list = lrd_map.map { case (key, map) =>
-      var avg_lrd_upper = 0.0
-      var avg_lrd_lower = 0.0
-      map._1.foreach { s =>
-        avg_lrd_upper += lrd_map(s)._2._1
-        avg_lrd_lower += lrd_map(s)._2._2
-      }
-      key -> (avg_lrd_upper / map._1.toList.length / map._2._2, avg_lrd_lower / map._1.toList.length / map._2._1)
-    }.toList.sortBy(_._2).reverse
-
-    // step. 5
-    List[List[(String, (Double, Double))]](
-      lof_sort_list.slice(0, k)
-      lof_sort_list.slice(k, lof_sort_list.size)
-    )
-    */
   }
+  /*
+      val mirror = df.withColumnRenamed(subset, "s").
+        withColumnRenamed("value", "n_value").
+        withColumnRenamed("avg", "n_value").
+        withColumnRenamed("avg_upper", "n_avg_upper").
+        withColumnRenamed("avg_lower", "n_avg_lower").toDF()
+
+      val dist_df = df.withColumnRenamed("avg", "value").join(mirror, Seq(target_col(0))).where(df(subset) =!= mirror("s")).
+        withColumn("dist_upper", calc_dev('value, 'value, 'n_value, 'n_value)(0)).
+        withColumn("dist_lower", calc_dev('value, 'value, 'n_value, 'n_value)(1)).
+        withColumn("pow(dist_upper)", 'dist_upper * 'dist_upper).
+        withColumn("pow(dist_lower)", 'dist_lower * 'dist_lower).
+        groupBy(subset, "s").agg("pow(dist_upper)" -> "sum", "pow(dist_lower)" -> "sum").orderBy($"sum(pow(dist_lower))")
+
+      val dist_map = dist_df.rdd.map { case Row(p1: String, p2: String, upper: Double, lower: Double) =>
+        p1 -> (p2 -> (upper, lower))
+      }.groupByKey.mapValues(_.toMap).collectAsMap()
+
+      // step. 2
+      val nearlest_map = dist_map.map { case (key, map) =>
+        val threthold = map.values.toList.sorted.apply(n - 1)._1
+        key -> map.filter(f => f._2._1 <= threthold)
+      }
+      nearlest_map.map(f => println(f))
+
+      // step. 3
+      val lrd_map = nearlest_map.map { case (key, map) =>
+        val a = map.values.toList.unzip match {
+          case (upp, low) =>
+            (upp.length / upp.sum, low.length / low.sum)
+        }
+        key -> (map.keys, a)
+      }
+
+      // step. 4
+      val lof_sort_list = lrd_map.map { case (key, map) =>
+        var avg_lrd_upper = 0.0
+        var avg_lrd_lower = 0.0
+        map._1.foreach { s =>
+          avg_lrd_upper += lrd_map(s)._2._1
+          avg_lrd_lower += lrd_map(s)._2._2
+        }
+        key -> (avg_lrd_upper / map._1.toList.length / map._2._2, avg_lrd_lower / map._1.toList.length / map._2._1)
+      }.toList.sortBy(_._2).reverse
+
+      // step. 5
+      List[List[(String, (Double, Double))]](
+        lof_sort_list.slice(0, k),
+        lof_sort_list.slice(k, lof_sort_list.size)
+      )
+      */
 
   /* ------------------------------
     udf
