@@ -54,6 +54,7 @@ object Evaluate {
     }
 
     // 書き込み処理準備
+
     val fileOutputStream = new FileOutputStream(filename, true)
     val writer = new OutputStreamWriter(fileOutputStream, "utf-8")
 

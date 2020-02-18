@@ -33,16 +33,17 @@ object udafApp {
   val z_p: Double = 1.96 * 1.96
 
   /* -----------------------------------------
-    TODO: Set Query's Parameter 
+    Set Query's Parameter
    -----------------------------------------*/
   var s: String = "object_id"
-  var x: String = "Quarter"
-  var y: String = "DepDelay"
+  var x: String = "meas_rcmodel_mag"
+  var y: String = "meas_rcmodel_mag_err"
   var agg_func: String = "AVG"
-  var data_file: String = "../data/test/sample_lof.csv"
-  var data_format: String = "csv"
+  var data_file: String = "hdfs:///user/matsumoto/joined"
+  var data_format: String = "parquet"
   var target_col: Array[String] = Array("meas_rcmodel_mag", "meas_rcmodel_mag_err")
-  var sampling_rate: Double = 1.0
+  var sampling_rate: Double = 0.0001
+  var where_clause: String = "meas_rcmodel_mag < 24" 
   var output_file: String = "" //TODO: set default file
 
   /* -------------
@@ -65,6 +66,7 @@ object udafApp {
         case "agg_func" => agg_func = e.split("=")(1)
         case "sampling_rate" => sampling_rate = e.split("=")(1).toDouble
         case "output_file" => output_file = e.split("=")(1)
+        case "where_clause" => where_clause = e.split("=")(1)
         case _ => println("error: command line arguments faults")
       }
     }
@@ -75,7 +77,7 @@ object udafApp {
    ------------------------------*/
   var block_num: Int = 0
   var result_gof: List[(String, (Double, Double))] = List.empty[(String, (Double, Double))]
-  var result_lof: List[(String, Double)] = List.empty[(String, Double)]
+  var result_lof: List[(String, (Double, Double))] = List.empty[(String, (Double, Double))]
   var subset_key: List[String] = List.empty[String]
   var pruning_subset_key: List[String] = List.empty[String]
   val part_cube = scala.collection.mutable.HashMap.empty[String, Map[String, Seq[Double]]]
@@ -103,7 +105,7 @@ object udafApp {
   private def initparameter(): Unit = {
     block_num = 0
     result_gof = List.empty[(String, (Double, Double))]
-    result_lof = List.empty[(String, Double)]
+    result_lof = List.empty[(String, (Double, Double))]
     subset_key = List.empty[String]
     pruning_subset_key = List.empty[String]
     part_cube.clear()
@@ -128,36 +130,26 @@ object udafApp {
     * 枝刈りのみ　　　　:　Pruning()
     * ベースライン　　　:　BaseLine()
 
-  <Application>
-    app 変数で制御
-    * app = 1 : Global Outlier Factor
-    * app = 2 : LOF(Local Outlier Factor
-    * app = 3 : seedb ?
-    * app = 4 : 回帰分析 (Regression Anaysis)
-
   <データ種類>
     data 変数で制御
     * data = 0 : 天文台データ
     * data = 1 : Flight Delay Data
+    * 
   --------------------------------------------------------------------------------- */
   def main(args: Array[String]) {
-    val app: Int = 2
     val data: Int = 0
-    val method: String = ("Baseline", "Share", "Pruning", "SharePruning")._2
+    val method: String = ("Baseline", "Share", "Pruning", "SharePruning")._4
     val output_ver: String = ("Experiment", "Correct")._1
     cla(args)
 
-
-/*
     data match {
       case 0 => astro_analysis(sqlContext, data, method)
-      case 1 => data_analysis(sqlContext, data, app, method)
+      case 1 => data_analysis(sqlContext, data, method)
     }
-*/
-    Application.test_lof(sqlContext, k= 10, agg_func)
 
-    res_output(app, data, method, output_ver) // 結果の出力
+    // Application.test_lof(sqlContext, k= 10, agg_func)
 
+    res_output(data, method, output_ver) // 結果の出力
 
     sc.stop
   }
@@ -166,13 +158,12 @@ object udafApp {
      天文台データ用
     ------------- */
   def astro_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
-    sqlContext.read.format(data_format).load(data_file).
-      filter($"meas_rcmodel_mag" < 24).sample(sampling_rate).
+    ReadData.read_astro(sqlContext, data_file, data_format, sampling_rate, where_clause).
       createOrReplaceTempView("astro")
 
     val df = hci_plot("astro")
 
-    var res_lof = List[List[(String, Double)]]()
+    var res_lof = List[List[(String, (Double, Double))]]()
 
     res_lof = Application.lof(sqlContext, k, target_col, agg_func, s, df)
 
@@ -208,15 +199,16 @@ object udafApp {
     outlier_df.write.option("header", "true").format("csv").mode("overwrite").save(output_file)
   }
 
-  private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
+  private def res_output(data: Int, method: String, output_ver: String): Unit = {
     output_ver match {
       case "Experiment" =>
-        for (app <- 1 to 1) { //TODO: set app
+        for (app <- 1 to 2) {
           subset_key = app match {
             case 1 => result_gof.map(_._1) :+ "All"
             case 2 => result_lof.map(_._1) :+ "All"
             case _ => ???
           }
+
           Evaluate.output_results(
             app, data, method, sc,
             datasize, k, z_p, pertition,
@@ -237,7 +229,7 @@ object udafApp {
         println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
       case "Correct" =>
-        Evaluate.currect_results(app, result_gof)
+        Evaluate.currect_results(1, result_gof)
 
       case _ => ???
     }
@@ -282,19 +274,19 @@ object udafApp {
   /* ---------------------------------------------------------------------------------
     クエリ共有化 & 枝刈り
    --------------------------------------------------------------------------------- */
-  def SharePruning(sqlContext: SQLContext, app: Int, data: Int, all_df: DataFrame, Forall_df: DataFrame): Unit = {
+  def SharePruning(sqlContext: SQLContext, data: Int, all_df: DataFrame, Forall_df: DataFrame): Unit = {
     var cube_df: DataFrame = sqlContext.emptyDataFrame
     val MergeValue = new MergeValue
     val MergeVariance = new MergeVariance
 
-    Array[Int](0, 1).foreach { i =>
+    Array[Int](0, 1,2,3,4).foreach { i =>
       val df = ReadData.read_block_data(sqlContext, i, data)
 
       if (pruning_subset_key.isEmpty) {
         df.createOrReplaceTempView("block")
       }
       else {
-        df.filter(!$"OriginCityName".isin(pruning_subset_key: _*)).createOrReplaceTempView("block") //TODO: 部分データの属性名の指定
+        df.filter(!$"OriginCityName".isin(pruning_subset_key: _*)).createOrReplaceTempView("block")
       }
 
       val sample_df = execute_all_subset_query("block")
@@ -310,7 +302,7 @@ object udafApp {
       }
 
       var res_gof = List[List[(String, (Double, Double))]]()
-      var res_lof = List[List[(String, Double)]]()
+      var res_lof = List[List[(String, (Double, Double))]]()
 
       val future_gof = Future {
         res_gof = Application.gof(
@@ -318,8 +310,8 @@ object udafApp {
           cube_df
             .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
             .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
-            .select(s, x, "avg_upper", "avg_lower").
-            join(
+            .select(s, x, "avg_upper", "avg_lower")
+            .join(
               Forall_df.drop("all_sum", "all_avg", "all_count", "all_variance"),
               Seq(x)
             )
@@ -328,22 +320,32 @@ object udafApp {
       val future_lof = Future {
         res_lof = Application.lof(
           sqlContext, k, target_col, agg_func, s,
-          execute_all_subset_query("all")
+          execute_all_subset_query("block")
             .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
             .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
         )
       }
+      res_lof = Application.lof(
+        sqlContext, k, target_col, agg_func, s,
+        execute_all_subset_query("block")
+          .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
+          .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
+      )
 
       val ff = future_gof.zip(future_lof)
-      while (!ff.isCompleted) {}
+      val ff2 = future_lof.zip(future_gof)
+
+      while (!ff.isCompleted){}
       result_gof = res_gof.head.take(k)
+
+      while (!ff2.isCompleted){}
       result_lof = res_lof.head.take(k)
 
       pruning_subset_key = (pruning_subset_key ::: res_gof(1).map(f => f._1).intersect(res_lof(1).map(f => f._1))).distinct
       pruning_rates = pruning_rates :+ pruning_subset_key.length * 100 / sub_num.toDouble
       pruning_num = pruning_num :+ pruning_subset_key.length
 
-      cube_df = cube_df.filter(!$"OriginCityName".isin(pruning_subset_key: _*)) //TODO: 部分データの属性名の指定
+      cube_df = cube_df.filter(!$"OriginCityName".isin(pruning_subset_key: _*))
     }
 
     all_time = System.currentTimeMillis().toInt - start
@@ -352,7 +354,7 @@ object udafApp {
   /* ---------------------------------------------------------------------------------
     クエリ共有化のみ行う手法
    --------------------------------------------------------------------------------- */
-  def Share(sqlContext: SQLContext, app: Int, data: Int, ALL_DF: DataFrame, Forall_df: DataFrame): Unit = {
+  def Share(sqlContext: SQLContext, data: Int, ALL_DF: DataFrame, Forall_df: DataFrame): Unit = {
 
     ALL_DF.randomSplit(Array[Double](1.0)).head
       .createOrReplaceTempView("share")
@@ -362,7 +364,7 @@ object udafApp {
       withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
 
     var res_gof = List[List[(String, (Double, Double))]]()
-    var res_lof = List[List[(String, Double)]]()
+    var res_lof = List[List[(String, (Double, Double))]]()
 
     val future_gof = Future {
       res_gof = Application.gof(
@@ -377,15 +379,18 @@ object udafApp {
     val future_lof = Future {
       res_lof = Application.lof(
         sqlContext, k, target_col, agg_func, s,
-        execute_all_subset_query("all")
+        execute_all_subset_query("share")
           .withColumn("avg_upper", $"avg" + avg_interval('count, 'variance))
           .withColumn("avg_lower", $"avg" - avg_interval('count, 'variance))
       )
     }
 
     val ff = future_gof.zip(future_lof)
-    while (!ff.isCompleted) {}
+    while (!ff.isCompleted){}
     result_gof = res_gof.head.take(k)
+    println(res_lof)
+    val ff2 = future_lof.zip(future_gof)
+    while (!ff2.isCompleted){}
     result_lof = res_lof.head.take(k)
 
 
@@ -399,7 +404,7 @@ object udafApp {
   /* --------------------------------------------------------------------------------------------------------------------
     枝刈りのみ行う手法
    -------------------------------------------------------------------------------------------------------------------- */
-  def Pruning(sqlContext: SQLContext, app: Int, data: Int, Forall_df: DataFrame): Unit = {
+  def Pruning(sqlContext: SQLContext, data: Int, Forall_df: DataFrame): Unit = {
     var cube_df: DataFrame = sqlContext.emptyDataFrame
     val MergeValue = new MergeValue
     val MergeVariance = new MergeVariance
@@ -411,7 +416,7 @@ object udafApp {
         df.createOrReplaceTempView("block")
       }
       else {
-        df.filter(!$"OriginCityName".isin(pruning_subset_key: _*)).createOrReplaceTempView("block") //TODO: 部分データの属性名の指定
+        df.filter(!$"OriginCityName".isin(pruning_subset_key: _*)).createOrReplaceTempView("block")
       }
 
       val subset_array: Array[String] = get_subset("block", s)
@@ -456,7 +461,7 @@ object udafApp {
   /* --------------------------------------------------------------------------------------------------------------------
     効率化なしの手法
    -------------------------------------------------------------------------------------------------------------------- */
-  def BaseLine(sqlContext: SQLContext, app: Int, data: Int, Forall_df: DataFrame): Unit = {
+  def BaseLine(sqlContext: SQLContext, data: Int, Forall_df: DataFrame): Unit = {
     // step. 部分データの総数を取得
     val subset_array: Array[String] = get_subset("all", s)
     var df = sqlContext.emptyDataFrame
@@ -492,9 +497,10 @@ object udafApp {
   /* -------------
     Flight data 用の実行関数
    ------------- */
-  def data_analysis(sqlContext: SQLContext, data: Int, app: Int, method: String): Unit = {
+  def data_analysis(sqlContext: SQLContext, data: Int, method: String): Unit = {
     // Read Data
-    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, data, data_file)
+    data_file = "hdfs:///user/matsumoto/flight/all/"
+    val ALL_DF: DataFrame = ReadData.read_all_data(sqlContext, 1, data_file)
     ALL_DF.createOrReplaceTempView("all")
 
     // Make all data result (Dataframe)
@@ -502,7 +508,7 @@ object udafApp {
       withColumn("all_avg_upper", $"all_avg" + avg_interval('all_count, 'all_variance)).
       withColumn("all_avg_lower", $"all_avg" - avg_interval('all_count, 'all_variance))
 
-    k = (1, 5, 10, 15, 20, 25, 30, 316)._3
+    k = (1, 5, 10, 15, 20, 25, 30, 316)._1
     datasize = (1, 2, 4, 6, 8, 10)._1
     initparameter() // 実験用パラメータの初期化
 
@@ -511,13 +517,13 @@ object udafApp {
     --------------*/
     method match {
       case "SharePruning" =>
-        SharePruning(sqlContext, app, data, ALL_DF, Forall_df)
+        SharePruning(sqlContext, data, ALL_DF, Forall_df)
       case "Share" =>
-        Share(sqlContext, app, data, ALL_DF, Forall_df)
+        Share(sqlContext, data, ALL_DF, Forall_df)
       case "Pruning" =>
-        Pruning(sqlContext, app, data, Forall_df)
+        Pruning(sqlContext, data, Forall_df)
       case "Baseline" =>
-        BaseLine(sqlContext, app, data, Forall_df)
+        BaseLine(sqlContext, data, Forall_df)
       case _ =>
         println("- Missing Select Method -")
     }
