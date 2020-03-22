@@ -242,7 +242,7 @@ object udafApp {
    ------------- */
   private def hci_plot(table: String): DataFrame = {
     sqlContext.sql(
-      "SELECT %s, avg(%s) as %s, avg(%s) as %s FROM %s GROUP BY %s" format(s, target_col(0), target_col(0), target_col(1), target_col(1), table, s)
+      "SELECT %s, %s, %s FROM %s" format(s, target_col(0), target_col(1), table)
     )
   }
 
