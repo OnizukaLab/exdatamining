@@ -51,7 +51,7 @@ object Application {
       withColumn("dev_lower", calc_dev('avg_upper, 'avg_lower, 'all_avg_upper, 'all_avg_lower)(1))
     dev_df = dev_df.groupBy(subset).agg("dev_upper" -> "sum", "dev_lower" -> "sum").orderBy($"sum(dev_upper)".desc)
     // step. 3
-    val under_threshold: Double = dev_df.head(k).last(2).toString.toDouble //todo: error
+    val under_threshold: Double = dev_df.head(k).last(2).toString.toDouble
     // step. 4
     val not_pruning_list: List[(String, (Double, Double))] =
     dev_df.filter($"sum(dev_upper)" > under_threshold).select(subset, "sum(dev_upper)", "sum(dev_lower)").
@@ -62,7 +62,7 @@ object Application {
         rdd.map(r => (r(0).toString, (r(1).toString.toDouble, r(2).toString.toDouble))).collect().toList
 
     // step. 5 List[(String,(Double,Double))]
-    return List(
+    List(
       not_pruning_list,
       pruning_list
     )

@@ -42,7 +42,7 @@ object udafApp {
   var data_file: String = "hdfs:///user/matsumoto/joined"
   var data_format: String = "csv"
   var target_col: Array[String] = Array("meas_rcmodel_mag", "meas_rcmodel_mag_err")
-  var sampling_rate: Double = 1.0
+  var sampling_rate: Double = 0.0001
   var output_file: String = ""
 
   /* -------------
@@ -205,7 +205,7 @@ object udafApp {
   private def res_output(app: Int, data: Int, method: String, output_ver: String): Unit = {
     output_ver match {
       case "Experiment" =>
-        for (app <- 1 to 1) { //TODO: set app
+        for (app <- 1 to 2) {
           subset_key = app match {
             case 1 => result_gof.map(_._1) :+ "All"
             case 2 => result_lof.map(_._1) :+ "All"
@@ -340,7 +340,7 @@ object udafApp {
       pruning_rates = pruning_rates :+ pruning_subset_key.length * 100 / sub_num.toDouble
       pruning_num = pruning_num :+ pruning_subset_key.length
 
-      cube_df = cube_df.filter(!$"object_id".isin(pruning_subset_key: _*)) //TODO: 部分データの属性名の指定
+      cube_df = cube_df.filter(!$"object_id".isin(pruning_subset_key: _*))
     }
 
     all_time = System.currentTimeMillis().toInt - start
@@ -405,7 +405,7 @@ object udafApp {
         df.createOrReplaceTempView("block")
       }
       else {
-        df.filter(!$"object_id".isin(pruning_subset_key: _*)).createOrReplaceTempView("block") //TODO: 部分データの属性名の指定
+        df.filter(!$"object_id".isin(pruning_subset_key: _*)).createOrReplaceTempView("block")
       }
 
       val subset_array: Array[String] = get_subset("block", s)
