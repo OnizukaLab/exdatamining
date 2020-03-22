@@ -89,10 +89,10 @@ object Application {
       """
         SELECT a.%s, gm( a.%s, a.%s, b.%s, b.%s, b.%s ) as distmap
         FROM dist as a, dist as b
-        WHERE a.%s != b.%s and a.%s is NOT NULL and b.%s is NOT NULL
+        WHERE a.%s != b.%s
         GROUP BY a.%s
       """.format(
-        subset, target_col(0), target_col(1), subset, target_col(0), target_col(1), subset, subset, target_col(1), target_col(1), subset
+        subset, target_col(0), target_col(1), subset, target_col(0), target_col(1), subset, subset, subset,
       )
     ).rdd.map { case Row(f, v: GenericRowWithSchema) =>
       f.toString -> (v.getList[String](0), v.getDouble(1))
