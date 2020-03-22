@@ -40,7 +40,7 @@ object udafApp {
   var y: String = "meas_rcmodel_mag_err"
   var agg_func: String = "AVG"
   var data_file: String = "hdfs:///user/matsumoto/joined"
-  var data_format: String = "csv"
+  var data_format: String = "parquet"
   var target_col: Array[String] = Array("meas_rcmodel_mag", "meas_rcmodel_mag_err")
   var sampling_rate: Double = 0.0001
   var output_file: String = ""
