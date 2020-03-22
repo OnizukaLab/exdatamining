@@ -92,7 +92,7 @@ object Application {
         WHERE a.%s != b.%s
         GROUP BY a.%s
       """.format(
-        subset, target_col(0), target_col(1), subset, target_col(0), target_col(1), subset, subset, subset,
+        subset, target_col(0), target_col(1), subset, target_col(0), target_col(1), subset, subset, subset
       )
     ).rdd.map { case Row(f, v: GenericRowWithSchema) =>
       f.toString -> (v.getList[String](0), v.getDouble(1))
