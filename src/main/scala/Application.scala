@@ -85,8 +85,6 @@ object Application {
     import sqlContext.implicits._
     sqlContext.udf.register("gm", new CalcuDistance)
 
-    println("aaaaa")
-
     val dist_map = sqlContext.sql(
       """
         SELECT a.%s, gm( a.%s, a.%s, b.%s, b.%s, b.%s ) as distmap
@@ -189,7 +187,7 @@ object Application {
         case z if z <= 0 => 0.0
         case z if z > 0 => List(abs(u1.toDouble - u2.toDouble), abs(l1.toDouble - l2.toDouble), abs(u1.toDouble - l2.toDouble), abs(l1.toDouble - u2.toDouble)).min
         case _ => 0.0
-      } //乖離度の下限
+      }
     )
   }
 
@@ -206,10 +204,6 @@ object Application {
     val ans = lof(sqlContext, 10, Array[String]("x", "y"), agg_func, "object_id", df)
     println(ans.head)
     println(ans.last)
-
-    GridSearch.sample()
-
-    GridSearch.test(sqlContext, df)
   }
 
 }

@@ -31,15 +31,17 @@ object LOF {
   // すべてのデータ間のの距離計算
   // --------------------------------------------------------------------------------------------------------------------
   def calc_dist(subset: Map[String, Map[String, Seq[Double]]]): Map[String, (Seq[String], Double)] = {
-
     var distance_map: Map[(String, String), Double] = Map.empty[(String, String), Double]
     for ((key1, xy_map1) <- subset; (key2, xy_map2) <- subset) {
       if (key1 != key2) {
         distance_map ++= Map(
-          (key1, key2) -> math.sqrt((xy_map1.keys.toList ++ xy_map2.keys.toList).distinct.map(kkey =>
-            // TODO:Seqのどの部分を使用するのか
-            math.pow(xy_map1.getOrElse(kkey, Seq(0D, 0D, 0D))(1) - xy_map2.getOrElse(kkey, Seq(0D, 0D, 0D))(1), 2)
-          ).sum
+          (key1, key2) -> math.sqrt(
+            (xy_map1.keys.toList ++ xy_map2.keys.toList).distinct.map(k_key =>
+              math.pow(
+                xy_map1.getOrElse(k_key, Seq(0D, 0D, 0D))(1) - xy_map2.getOrElse(k_key, Seq(0D, 0D, 0D))(1),
+                2
+              )
+            ).sum
           )
         )
       }
@@ -109,10 +111,6 @@ object LOF {
       "h" -> Map("12" -> Seq[Double](0.01, 0.01), "1" -> Seq[Double](0.04, 0.04), "2" -> Seq[Double](0.10, 0.10), "3" -> Seq[Double](0.234, 0.234), "4" -> Seq[Double](0.294, 0.294), "5" -> Seq[Double](0.3333, 0.3333)),
       "i" -> Map("12" -> Seq[Double](0, 0), "1" -> Seq[Double](0.03, 0.03), "2" -> Seq[Double](0.10, 0.10), "3" -> Seq[Double](0.233, 0.233), "4" -> Seq[Double](0.300, 0.300), "5" -> Seq[Double](0.3184, 0.3184))
     )
-
-
-
     toy_data
   }
-
 }
